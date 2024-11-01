@@ -1,6 +1,7 @@
 from typing import List, Callable, Dict #module and allows specifying the types of the keys and values in the dictionary.
 from datetime import datetime
 import uuid
+
 class Action:
     def __init__(self, name: str, action: Callable, params: Dict = None, 
                  dependencies: List['Action'] = None, max_retries: int = 0, 
@@ -22,6 +23,7 @@ class Action:
         self.created_at = datetime.now()
         self.updated_at = self.created_at #****do we want this one? if i remember correctly when we were designing it was not taken intoo account
         self.error_message = ""
+
     def execute(self):
         """Execute the action with retry logic."""
         while self.retry_count <= self.max_retries:
@@ -34,7 +36,7 @@ class Action:
                 self.retry_count += 1
                 self.error_message = str(e)
                 self.status = "failed"
-                
+
                 if self.retry_count > self.max_retries:
                     # Call the on_retry_failure callback if provided
                     if self.on_retry_failure:
@@ -44,23 +46,29 @@ class Action:
                 else:
                     # Log the retry attempt (optional)
                     print(f"Retrying {self.name}, attempt {self.retry_count}...")
-                    
+
         return "Action has falied"  # if the task ultimately fails
+
+
     def update_timeout(self, new_timeout: int):
         """Update the timeout value for the Action."""
         self.timeout = new_timeout
+
     def update_max_retries(self, new_max_retries: int):
         """Update the maximum number of retries for the Action."""
         self.max_retries = new_max_retries
+
     def update_retry_behavior(self, new_retry_behavior: str):
         """Update the retry behavior for the Action."""
         if new_retry_behavior in ["skip", "retry"]:
             self.retry_behavior = new_retry_behavior
         else:
             raise ValueError("Invalid retry behavior. Use 'skip' or 'retry'.")
+
     def set_retry_failure_action(self, new_on_retry_failure: Callable):
         """Set the action to take on retry failure."""
         self.on_retry_failure = new_on_retry_failure
+
     def handle_creation_response(self, response_code: int):
         """Handle the response code from the action creation."""
         if response_code == 201:
@@ -76,5 +84,7 @@ class Action:
         else:
             self.status = "unknown"
             return "Unknown response code."
+    
+
     def __repr__(self):
         return f"Action(id={self.id}, name={self.name}, status={self.status}, timeout={self.timeout})"
