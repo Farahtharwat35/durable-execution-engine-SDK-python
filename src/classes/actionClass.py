@@ -69,6 +69,7 @@ class Action:
         """Set the action to take on retry failure."""
         self.on_retry_failure = new_on_retry_failure
 
+    
     def handle_creation_response(self, response_code: int):
         """Handle the response code from the action creation."""
         if response_code == 201:
@@ -80,11 +81,10 @@ class Action:
             #****should we detect the reason for faliure and add it to the msg
         elif response_code == 500:
             self.status = "failed"
-            return "Server error: Please try again later."
+            return "500, Internal server error"
         else:
             self.status = "unknown"
             return "Unknown response code."
-    
 
     def __repr__(self):
         return f"Action(id={self.id}, name={self.name}, status={self.status}, timeout={self.timeout})"
