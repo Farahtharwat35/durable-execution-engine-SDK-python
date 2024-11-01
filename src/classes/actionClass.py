@@ -1,8 +1,9 @@
 from typing import List, Callable, Dict #module and allows specifying the types of the keys and values in the dictionary.
 from datetime import datetime
 import uuid
-
 from typing import Optional, Tuple, Union #for the dependancy of the action on the work flow on the project
+from enum import Enum
+
 #*** will be removed only here temoprarely till there actual classes are created
 class Project:
     def __init__(self, project_id: int, project_name: str):
@@ -14,6 +15,16 @@ class Workflow:
         self.workflow_name = workflow_name
         self.project = project
 #*** end of what will be seprated ****rember to include the classes here to avoid errors***#
+
+class ActionStatus(Enum):
+    #i think it's good practice to use an enum for the status, *******anything more needed in the enum
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CREATED = "created"
+    UNKNOWN = "unknown"
+
 class Action:
     def __init__(self, name: str, action: Callable, params: Dict = None, 
                  dependencies: List['Action'] = None, max_retries: int = 0, 
@@ -29,7 +40,7 @@ class Action:
         self.description = "" #at instentiation empty but set by the user later
         self.dependencies = dependencies if dependencies is not None else [] #if the action is a dependancy and something that depends on it is provoced then this action is triggred (using a dependant triggers the dependency)
         self.params = params if params is not None else {} #if one of the parmaters of the action are needed an instance of the action is created
-        self.status = "not_started" #initial state not_started till the workflow itself is started
+        self.status = ActionStatus.NOT_STARTED #initial state not_started till the workflow itself is started 
         self.retry_count = 0
         self.max_retries = max_retries 
         self.retry_behavior = retry_behavior
