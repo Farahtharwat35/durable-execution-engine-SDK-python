@@ -2,12 +2,28 @@ from typing import List, Callable, Dict #module and allows specifying the types 
 from datetime import datetime
 import uuid
 
+from typing import Optional, Tuple, Union #for the dependancy of the action on the work flow on the project
+#*** will be removed only here temoprarely till there actual classes are created
+class Project:
+    def __init__(self, project_id: int, project_name: str):
+        self.project_id = project_id
+        self.project_name = project_name
+class Workflow:
+    def __init__(self, workflow_id: int, workflow_name: str, project: Project):
+        self.workflow_id = workflow_id
+        self.workflow_name = workflow_name
+        self.project = project
+#*** end of what will be seprated ****rember to include the classes here to avoid errors***#
 class Action:
     def __init__(self, name: str, action: Callable, params: Dict = None, 
                  dependencies: List['Action'] = None, max_retries: int = 0, 
                  retry_behavior: str = "skip", on_retry_failure: Callable = None, 
-                 timeout: int = 60):
+                 timeout: int = 60,  workflow: Workflow = None, project: Project = None):
         # by default max_reteries is 0 and the retry_behavior is to skip however user can and should change both, defaukt timeout is 60s can be reconfigures
+        # Validate that the workflow belongs to the specified project
+        if workflow and project and workflow.project != project:
+            raise ValueError("The specified workflow does not belong to the specified project.")
+
         self.id = str(uuid.uuid4())  # Generate a unique ID for each Action
         self.name = f"{name}_{self.id}" #****to insure  that the name is unique the id will bw appended to it, tmm wala eh security wise
         self.description = "" #at instentiation empty but set by the user later
@@ -23,6 +39,8 @@ class Action:
         self.created_at = datetime.now()
         self.updated_at = self.created_at #****do we want this one? if i remember correctly when we were designing it was not taken intoo account
         self.error_message = ""
+        self.workflow = workflow  # Reference to the Workflow
+        self.project = project    # Reference to the Project
 
     def execute(self):
         """Execute the action with retry logic."""
@@ -69,12 +87,26 @@ class Action:
         """Set the action to take on retry failure."""
         self.on_retry_failure = new_on_retry_failure
 
+    def get_workflow_info(self) -> Union[Tuple[str, str], str]:
+        """Return the workflow name and ID."""
+        if self.workflow:
+            return self.workflow.workflow_name, self.workflow.workflow_id
+        else:
+            return "Error: The action cannot be created without belonging to a workflow that belongs to a project."
+    def get_project_info(self) -> Union[Tuple[str, str], str]:
+        """Return the project name and ID."""
+        if self.project:
+            return self.project.project_name, self.project.project_id
+        else:
+            return "Error: The project does not exist."
+
+
     
     def handle_creation_response(self, response_code: int):
         """Handle the response code from the action creation."""
         if response_code == 201:
             self.status = "created"
-            return "Successful operation"
+            return f"Successful operation. Workflow ID: {self.workflow.workflow_id}, Workflow Name: {self.workflow.workflow_name}"
         elif response_code == 400:
             self.status = "failed"
             return "400, Bad request"
