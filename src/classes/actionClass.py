@@ -3,6 +3,8 @@ from datetime import datetime
 import uuid
 from typing import Optional, Tuple, Union #for the dependancy of the action on the work flow on the project
 from enum import Enum
+import requests  # Assuming you are using the requests library for HTTP requests
+
 
 #*** will be removed only here temoprarely till there actual classes are created
 class Project:
@@ -122,13 +124,12 @@ class Action:
         """Handle the response code from the action creation."""
         if response_code == 201:
             #*****ha5od el id bat3 el action w a7oto fell self.id*****# 
+            ##Salma 3alashan mesh fkra
             self.status = "created"
             return f"Successful operation. Workflow ID: {self.workflow.workflow_id}, Workflow Name: {self.workflow.workflow_name}"
         elif response_code == 400:
             self.status = "failed"
             return "400, Bad request"
-            #****should we detect the reason for faliure and add it to the msg
-            # msg sent you descide you want to show or not
         elif response_code == 500:
             self.status = "failed"
             return "500, Internal server error"
@@ -136,9 +137,33 @@ class Action:
         else:
             self.status = "unknown"
             return "Unknown response code."
+        
+    def create(self):
+        """Send the created Action object to the backend for creation."""
+        # Prepare the data to be sent to the backend
+        action_data = {
+            "name": self.name,
+            "params": self.params,
+            "max_retries": self.max_retries,
+            "retry_behavior": self.retry_behavior,
+            "timeout": self.timeout,
+            "project_id": self.project,  # Assuming project ID is sufficient
+            # Include other necessary fields as required by the backend
+        }
+
+        # Send the request to the backend (replace 'backend_url' with the actual URL)
+        try:
+            ####*****place holder url we need the actual url
+            response = requests.post('https://backend_url/api/actions', json=action_data) 
+
+            # Handle the response from the backend
+            return self.handle_creation_response(response.status_code)
+        except Exception as e:
+            self.status = ActionStatus.FAILED
+            self.error_message = str(e)
+            return f"Failed to create action: {self.error_message}"
 
     def __repr__(self):
         return f"Action(id={self.id}, name={self.name}, status={self.status}, timeout={self.timeout})"
 
 
-### add create function and will send the created object to the backend & SDK
