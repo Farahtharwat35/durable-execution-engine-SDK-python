@@ -2,15 +2,10 @@ from typing import List, Callable, Dict #module and allows specifying the types 
 from datetime import datetime
 from typing import Optional, Tuple, Union #for the dependancy of the action on the work flow on the project
 from enum import Enum
-import requests  # Assuming you are using the requests library for HTTP requests
-
+import requests  # using the requests library for HTTP requests
+from .projectClass import Project
 
 #*** will be removed only here temoprarely till there actual classes are created
-class Project:
-    def __init__(self, project_id: int, project_name: str):
-        self.project_id = project_id
-        self.project_name = project_name
-
 class Workflow:
     def __init__(self, workflow_id: int, workflow_name: str, project: Project):
         self.workflow_id = workflow_id
@@ -82,7 +77,6 @@ class Action:
                     
         return "Action has failed"  # If the task ultimately fails
 
-
     def update_timeout(self, new_timeout: int):
         """Update the timeout value for the Action."""
         self.timeout = new_timeout
@@ -110,14 +104,12 @@ class Action:
     #    else:
     #        return "Error: The action cannot be created without belonging to a workflow that belongs to a project."
 
-
     def get_project_info(self) -> Union[Tuple[str, str], str]:
         """Return the project name and ID."""
         if self.project:
             return self.project.project_name, self.project.project_id
         else:
             return "Error: The project does not exist."
-
 
     def handle_creation_response(self, response_code: int): #create will return, create lama ta5od el response hat7ot l nafsaha el id
         """Handle the response code from the action creation."""
@@ -164,5 +156,3 @@ class Action:
 
     def __repr__(self):
         return f"Action(id={self.id}, name={self.name}, status={self.status}, timeout={self.timeout})"
-
-
