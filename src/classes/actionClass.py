@@ -20,7 +20,7 @@ class Workflow:
 
 #retry package, spacify el type of the package
 class ActionStatus(Enum):
-    #i think it's good practice to use an enum for the status, *******anything more needed in the enum
+    #i think it's good practice to use an enum for the status
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -34,11 +34,12 @@ class Action:
                  dependencies: List['Action'] = None, max_retries: int = 0, 
                  retry_behavior: str = "skip", on_retry_failure: Callable = None, 
                  timeout: int = 60, workflow: Workflow = None, project: Project = None):
-        # by default max_reteries is 0 and the retry_behavior is to skip however user can and should change both, defaukt timeout is 60s can be reconfigures
-
-        # Validate that the workflow belongs to the specified project
-        if workflow and project and workflow.project != project:
-            raise ValueError("The specified workflow does not belong to the specified project.")
+        # by default max_reteries is 0 and the retry_behavior is to skip however user can and should change both, default timeout is 60s can be reconfigures
+        
+        #commented out instead of completely deleted. commented out as it won't be needed for the action as the action is created before the worflow
+        ## Validate that the workflow belongs to the specified project
+        #if workflow and project and workflow.project != project:
+        #    raise ValueError("The specified workflow does not belong to the specified project.")
 
         self.name = name #database will handle uniquness
         self.description = "" #at instentiation empty but set by the user later
@@ -52,21 +53,21 @@ class Action:
         self.timeout = timeout #allows for changing the timeout
         self.action = action
         self.error_message = ""
-        self.project = project    # Reference to the Project ###project ID only
+        self.project = project.project_id    # Reference to the Project ###project ID only
 
     
-    def execute(self): #***gets called inside the excute of the workflow***#
+    def actionExecute(self):  # Called inside the execute of the workflow
         """Execute the action with retry logic."""
         while self.retry_count <= self.max_retries:
             try:
                 # Attempt to execute the action
                 result = self.action(**self.params)
-                self.status = "completed"
+                self.status = ActionStatus.COMPLETED  # Update status to completed
                 return result
             except Exception as e:
                 self.retry_count += 1
                 self.error_message = str(e)
-                self.status = "failed"
+                self.status = ActionStatus.FAILED  # Update status to failed
                 
                 if self.retry_count > self.max_retries:
                     # Call the on_retry_failure callback if provided
@@ -78,7 +79,7 @@ class Action:
                     # Log the retry attempt (optional)
                     print(f"Retrying {self.name}, attempt {self.retry_count}...")
                     
-        return "Action has falied"  # if the task ultimately fails
+        return "Action has failed"  # If the task ultimately fails
 
 
     def update_timeout(self, new_timeout: int):
@@ -100,12 +101,13 @@ class Action:
         """Set the action to take on retry failure."""
         self.on_retry_failure = new_on_retry_failure
 
-    def get_workflow_info(self) -> Union[Tuple[str, str], str]:
-        """Return the workflow name and ID."""
-        if self.workflow:
-            return self.workflow.workflow_name, self.workflow.workflow_id
-        else:
-            return "Error: The action cannot be created without belonging to a workflow that belongs to a project."
+    #commented out instead of completely deleted. commented out as it won't be needed for the action as the action is created before the worflow
+    #def get_workflow_info(self) -> Union[Tuple[str, str], str]:
+    #    """Return the workflow name and ID."""
+    #    if self.workflow:
+    #        return self.workflow.workflow_name, self.workflow.workflow_id
+    #    else:
+    #        return "Error: The action cannot be created without belonging to a workflow that belongs to a project."
 
 
     def get_project_info(self) -> Union[Tuple[str, str], str]:
