@@ -12,14 +12,11 @@ class ProjectStatus(Enum):
 
 class Project:
     def __init__(self, project_id: int, project_name: str):
-        self.project_id = project_id
         self.project_name = project_name
-        self.description: str = ""
-        self.created_at: datetime = datetime.now()
+        self.description: str = "" # A string for project details, initialized as an empty string.
         self.status: ProjectStatus = ProjectStatus.ACTIVE
         self.workflows: List = []
         self.actions: List = []
-        self.metadata: Dict = {}
 
     def add_workflow(self, workflow) -> None:
         """Add a workflow to the project"""
@@ -37,9 +34,6 @@ class Project:
         """Update the project description"""
         self.description = description
 
-    def update_metadata(self, metadata: Dict) -> None:
-        """Update project metadata"""
-        self.metadata.update(metadata)
 
     def get_workflows(self) -> List:
         """Return all workflows in the project"""
@@ -56,10 +50,11 @@ class Project:
             "project_name": self.project_name,
             "description": self.description,
             "status": self.status.value,
-            "metadata": self.metadata
         }
 
         try:
+
+            ####update el link DON'T FORGET
             response = requests.post('https://backend_url/api/projects', json=project_data)
             if response.status_code == 201:
                 return {"status": "success", "message": "Project created successfully"}
