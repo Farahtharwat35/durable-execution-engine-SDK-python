@@ -1,4 +1,13 @@
 # test_actionClass.py
+import sys
+
+import os
+
+# Add the directory of my_module.py to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
+#C:\Users\noura\Documents\ASU\GraduationProject\Fall\durable-execution-engine-SDK-python\test\unittest.py
+print(sys.path)
+
 import unittest
 from src.classes.actionClass import Action, ActionStatus
 
