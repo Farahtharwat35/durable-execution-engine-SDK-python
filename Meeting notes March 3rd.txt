@@ -1,0 +1,20 @@
+Meeting notes March 3rd.txt
+
+regestring will happen in the cli for the while service
+
+workflow
+terminate/pause/resume
+object should take base url (of the engine) during creation
+use the end points in the api documentation
+
+service will take the base url of the endine to snd log in the running action function
+
+flask leha el 
+flask -app (then run)
+geunicorn or flask to build the service over
+
+internal handler in the service so that the engine can send to the service to get the health & another so that when the engine registrars certain deployment(i.e.flask) when communicating with the app be told el handlers and services and their input and output
+
+badl .handler .workflow
+
+have a look at restate
