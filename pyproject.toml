@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "durable-execution-engine-sdk"
+version = "0.1.0"
+description = ""
+authors = ["Salma Elsoly <salmaelsoly@gmail.com>"]
+readme = "README.md"
+packages = [{include = "durable"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+black = "^25.1.0"
+isort = "^6.0.1"
+flake8 = "^7.1.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
