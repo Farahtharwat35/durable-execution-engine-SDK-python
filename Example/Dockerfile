@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM python:3.9-slim AS builder
+FROM python:3.10-slim AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -16,15 +16,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Stage 2: Final stage
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# Set the working directory
-WORKDIR /app
+# Set the working directory to /app/Example
+WORKDIR /app/Example
 
 # Copy only the virtual environment from the builder stage
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy the application code
+# Copy the application code into the Example directory
 COPY . .
 
 # Set the environment variables
@@ -33,5 +33,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the application using Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app.main:app"]
+# Command to run the application using Uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
