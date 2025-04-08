@@ -1,0 +1,17 @@
+# Core dependencies
+fastapi==0.109.0 #web framework for building APIs with Python based on standard Python type hints.
+uvicorn==0.27.0 
+pydantic==2.5.3 #Data validation using Python type hints.
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Authentication
+python-jose==3.3.0
+passlib==1.7.4
+
+# Development dependencies
+pytest==7.4.0
+black==23.11.0
+flake8==6.1.0
