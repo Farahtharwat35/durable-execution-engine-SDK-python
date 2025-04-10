@@ -1,5 +1,7 @@
 import pytest
+
 from src.app.Response import Response
+
 
 @pytest.mark.asyncio
 async def test_response_asgi():
@@ -19,12 +21,13 @@ async def test_response_asgi():
     )
     await response.asgi_response(mock_send)
 
+
 @pytest.mark.asyncio
 async def test_empty_body_with_content_type():
     async def mock_send(message):
         if message["type"] == "http.response.start":
             assert message["headers"] == [
-                (b"content-type", b"application/json"), 
+                (b"content-type", b"application/json"),
             ]
 
     response = Response(
@@ -33,7 +36,8 @@ async def test_empty_body_with_content_type():
     )
     await response.asgi_response(mock_send)
 
+
 @pytest.mark.asyncio
 async def test_invalid_header_type():
     with pytest.raises(TypeError, match="Header keys/values must be bytes"):
-        Response(body="test", headers={"x-invalid": "string"}) 
+        Response(body="test", headers={"x-invalid": "string"})

@@ -1,5 +1,7 @@
 import pytest
+
 from src.app.Request import Request
+
 
 @pytest.mark.asyncio
 async def test_request_json():
@@ -20,12 +22,13 @@ async def test_request_json():
     request = Request(scope, mock_receive)
     assert await request.json() == {"key": "value"}
 
+
 @pytest.mark.asyncio
 async def test_request_invalid_json():
     async def mock_receive():
         return {
             "type": "http.request",
-            "body": b'{"key": value}',  
+            "body": b'{"key": value}',
             "more_body": False,
         }
 
@@ -37,15 +40,15 @@ async def test_request_invalid_json():
         "headers": [(b"content-type", b"application/json")],
     }
     request = Request(scope, mock_receive)
-    
+
     with pytest.raises(ValueError, match="Invalid JSON"):
         await request.json()
+
 
 @pytest.mark.asyncio
 async def test_request_missing_content_type():
     async def mock_receive():
         return {
-
             "type": "http.request",
             "body": b'{"key": "value"}',
             "more_body": False,
@@ -56,19 +59,20 @@ async def test_request_missing_content_type():
         "path": "/",
         "query_string": b"",
         "type": "http",
-        "headers": [], 
+        "headers": [],
     }
     request = Request(scope, mock_receive)
-    
-    with pytest.raises(ValueError, match="Content-Type must be 'application/json'"):
+    error_msg = "Content-Type must be 'application/json'"
+    with pytest.raises(ValueError, match=error_msg):
         await request.json()
+
 
 @pytest.mark.asyncio
 async def test_request_empty_body():
     async def mock_receive():
         return {
             "type": "http.request",
-            "body": b"",  
+            "body": b"",
             "more_body": False,
         }
 
@@ -77,10 +81,9 @@ async def test_request_empty_body():
         "path": "/",
         "query_string": b"",
         "type": "http",
-
         "headers": [(b"content-type", b"application/json")],
     }
     request = Request(scope, mock_receive)
-    
+
     with pytest.raises(ValueError, match="Empty JSON body"):
         await request.json()

@@ -1,6 +1,7 @@
 import json
 from urllib.parse import parse_qs
 
+
 class Request:
     def __init__(self, scope, receive):
         self.scope = scope
@@ -12,7 +13,7 @@ class Request:
 
     async def json(self):
         content_type = self.headers.get("content-type", "")
-        
+
         if not content_type.startswith("application/json"):
             raise ValueError("Content-Type must be 'application/json'")
 

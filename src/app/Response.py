@@ -1,8 +1,14 @@
 import json
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 
 class Response:
-    def __init__( self, body: Any, status: int = 200,  headers: Optional[Dict[bytes, bytes]] = None,):
+    def __init__(
+        self,
+        body: Any,
+        status: int = 200,
+        headers: Optional[Dict[bytes, bytes]] = None,
+    ):
         self.body = body
         self.status = status
         self.headers = headers or {}
@@ -20,16 +26,24 @@ class Response:
                 except TypeError as e:
                     raise TypeError(f"Body serialization failed: {e}")
             else:
-                body_bytes = self.body.encode("utf-8") if isinstance(self.body, str) else self.body
+                body_bytes = (
+                    self.body.encode("utf-8")
+                    if isinstance(self.body, str)
+                    else self.body
+                )
         headers = list(self.headers.items())
         if b"content-type" not in self.headers:
             headers.insert(0, (b"content-type", b"text/plain"))
-        await send({
-            "type": "http.response.start",
-            "status": self.status,
-            "headers": headers,
-        })
-        await send({
-            "type": "http.response.body",
-            "body": body_bytes,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": self.status,
+                "headers": headers,
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": body_bytes,
+            }
+        )
