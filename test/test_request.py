@@ -3,7 +3,6 @@ from src.app.Request import Request
 
 @pytest.mark.asyncio
 async def test_request_json():
-    """Test JSON body parsing."""
     async def mock_receive():
         return {
             "type": "http.request",
@@ -20,3 +19,68 @@ async def test_request_json():
     }
     request = Request(scope, mock_receive)
     assert await request.json() == {"key": "value"}
+
+@pytest.mark.asyncio
+async def test_request_invalid_json():
+    async def mock_receive():
+        return {
+            "type": "http.request",
+            "body": b'{"key": value}',  
+            "more_body": False,
+        }
+
+    scope = {
+        "method": "POST",
+        "path": "/",
+        "query_string": b"",
+        "type": "http",
+        "headers": [(b"content-type", b"application/json")],
+    }
+    request = Request(scope, mock_receive)
+    
+    with pytest.raises(ValueError, match="Invalid JSON"):
+        await request.json()
+
+@pytest.mark.asyncio
+async def test_request_missing_content_type():
+    async def mock_receive():
+        return {
+
+            "type": "http.request",
+            "body": b'{"key": "value"}',
+            "more_body": False,
+        }
+
+    scope = {
+        "method": "POST",
+        "path": "/",
+        "query_string": b"",
+        "type": "http",
+        "headers": [], 
+    }
+    request = Request(scope, mock_receive)
+    
+    with pytest.raises(ValueError, match="Content-Type must be 'application/json'"):
+        await request.json()
+
+@pytest.mark.asyncio
+async def test_request_empty_body():
+    async def mock_receive():
+        return {
+            "type": "http.request",
+            "body": b"",  
+            "more_body": False,
+        }
+
+    scope = {
+        "method": "POST",
+        "path": "/",
+        "query_string": b"",
+        "type": "http",
+
+        "headers": [(b"content-type", b"application/json")],
+    }
+    request = Request(scope, mock_receive)
+    
+    with pytest.raises(ValueError, match="Empty JSON body"):
+        await request.json()
