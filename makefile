@@ -3,4 +3,7 @@ format:
 	isort .
 lint:
 	flake8 .
+test:
+	python -m pytest test/ --verbose
+
 
