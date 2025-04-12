@@ -9,7 +9,7 @@ class Request:
         self.method = scope["method"]
         self.path = scope["path"]
         self.query_params = parse_qs(scope["query_string"].decode())
-        self.headers = {k.decode(): v.decode() for k, v in scope["headers"]}
+        self.headers = {k.decode().lower(): v.decode() for k, v in scope["headers"]}
 
     async def json(self):
         content_type = self.headers.get("content-type", "")
