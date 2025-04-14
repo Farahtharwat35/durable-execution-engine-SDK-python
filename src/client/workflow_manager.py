@@ -35,14 +35,14 @@ class WorkflowManager:
             else:
                 raise Exception(f"Error: {response.status_code} - {response.json().get('message', '')}")
 
-    def resume(self, execution_id: str, status:str) -> str:
-        self._update_status(execution_id, status)
+    def resume(self, execution_id: str, status:str) -> None:
+        return self._update_status(execution_id, status)
     
-    def pause(self, execution_id: str, status:str) -> str:
-        self._update_status(execution_id, status)
+    def pause(self, execution_id: str, status:str) -> None:
+        return self._update_status(execution_id, status)
 
-    def terminate(self, execution_id: str, status:str) -> str:
-        self._update_status(execution_id, status)
+    def terminate(self, execution_id: str, status:str) -> None:
+        return self._update_status(execution_id, status)
     
     def _update_status(self, execution_id: str, status: str) -> None:
         url = f"{self.base_url}/executions/{execution_id}"
