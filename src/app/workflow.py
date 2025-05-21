@@ -3,7 +3,7 @@ from fastapi import Request, HTTPException, status
 from pydantic.typing import create_model
 import asyncio
 from pydantic import ValidationError, create_model
-
+from .workflow_context import WorkflowContext
 class Workflow:
     def __init__(self, func: Callable):
         self.func = func
@@ -25,6 +25,7 @@ class Workflow:
                 body = await request.json()
                 full = FullRequest(**body)
                 ctx = WorkflowContext(execution_id=full.execution_id)
+                #TODO: hit started endpoint in engine (log in a util file) ,  ALSO URL OF THE ENGINE WILL BE NEEDED , NEED TO FIND A WAY
                 result = self.func(ctx, full.input)
                 if asyncio.iscoroutine(result):
                     result = await result
