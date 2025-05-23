@@ -15,6 +15,7 @@ class Workflow:
         return hints.get('input', Any) , hints.get('return', Any)
 
     def get_handler_route(self):
+        This method generates a route handler that can be used in a FastAPI application.
         try:
             FullRequest = create_model(
                 f"{self.name}Request",
