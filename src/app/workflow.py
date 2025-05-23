@@ -5,17 +5,21 @@ import asyncio
 from pydantic import ValidationError, create_model
 from .workflow_context import WorkflowContext
 class Workflow:
-    def __init__(self, func: Callable):
+    def __init__(self, func: Callable, retention_period: int = None):
         self.func = func
         self.name = func.__name__
-        self.input , self.output = self._get_io(func)
+        self.retention_period = retention_period
+        self.input, self.output = self._get_io(func)
 
     def _get_io(self, func):
         hints = get_type_hints(func)
         return hints.get('input', Any) , hints.get('return', Any)
 
     def get_handler_route(self):
+        """
         This method generates a route handler that can be used in a FastAPI application.
+        The route handler will accept a JSON request body and return the result of the workflow function.
+        """
         try:
             FullRequest = create_model(
                 f"{self.name}Request",
