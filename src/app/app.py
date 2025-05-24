@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from src.app.service_registry import ServiceRegistry
+from fastapi.responses import JSONResponse
+from .types import EndureException, ErrorResponse
+from dataclasses import asdict
 class DurableApp:
     """
     DurableApp is a wrapper class for a FastAPI application that integrates a service discovery endpoint.
@@ -28,6 +31,10 @@ class DurableApp:
             methods=["GET"],
         )
         self.app.include_router(serviceRegistry.get_router())
+        self.app.add_exception_handler(
+            EndureException,
+            self.raise_exception
+        )
         
     def _discover(self):
         services = self.serviceRegistry.get_services()
@@ -48,5 +55,10 @@ class DurableApp:
                 for service_name, workflows in services.items()
             ]
         }
-        
-
+    
+    async def raise_exception(request: Request, exc: EndureException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=asdict(ErrorResponse(output=exc.output))
+        )
+    

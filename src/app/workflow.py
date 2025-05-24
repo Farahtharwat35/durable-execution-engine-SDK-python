@@ -4,6 +4,8 @@ from pydantic.typing import create_model
 import asyncio
 from pydantic import ValidationError, create_model
 from .workflow_context import WorkflowContext
+from .internal_client import InternalEndureClient
+from .types import EndureException
 class Workflow:
     """
     Represents a workflow function that can be executed through a FastAPI endpoint.
@@ -66,36 +68,32 @@ class Workflow:
         Notes:
             - The handler expects a JSON request with 'execution_id' and 'input' fields.
             - Both synchronous and asynchronous workflow functions are supported.
-            - TODO: Integration with the durable execution engine for workflow state tracking.
         """
-        try:
-            FullRequest = create_model(
-                f"{self.name}Request",
-                execution_id=(str, ...),
-                input=(self.input, ...)
-            )
-            async def handler(request: Request):
+        FullRequest = create_model(
+            f"{self.name}Request",
+            execution_id=(str, ...),
+            input=(self.input, ...)
+        )
+        async def handler(request: Request):
+            try:
                 body = await request.json()
                 full = FullRequest(**body)
                 ctx = WorkflowContext(execution_id=full.execution_id)
-                #TODO: hit started endpoint in engine (log in a util file) ,  ALSO URL OF THE ENGINE WILL BE NEEDED , NEED TO FIND A WAY
+                InternalEndureClient.mark_execution_as_running(self.execution_id)
                 result = self.func(ctx, full.input)
                 if asyncio.iscoroutine(result):
                     result = await result
                 return {"output": result}
-            
-        except ValidationError as ve:
-            print(f"Validation error: {ve}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ve.errors()
-            )
-
-        except Exception as e:
-            print(f"Error creating handler route: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error"
-            )
+            except ValidationError as ve:
+                print(f"Validation error: {ve}")
+                raise EndureException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    output={"error": "Validation error", "details": ve.errors()}
+                )
+            except Exception as e:
+                print(f"Error in workflow handler: {e}")
+                raise EndureException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    output={"error": "Internal server error", "details": str(e)}
+                )
         return handler
-       
