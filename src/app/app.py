@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
-from src.app.service_registry import ServiceRegistry
 from fastapi.responses import JSONResponse
-from .types import EndureException, ErrorResponse
+from ._internal.types import EndureException, ErrorResponse, ServiceRegistry
 from dataclasses import asdict
 class DurableApp:
     """

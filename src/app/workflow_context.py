@@ -1,6 +1,5 @@
 from fastapi import HTTPException
-from src.app.internal_client import InternalEndureClient
-from src.app.types import Log, LogStatus, RetryMechanism
+from ._internal import InternalEndureClient , Log, LogStatus, RetryMechanism
 from fastapi import status 
 from datetime import datetime
 import time
