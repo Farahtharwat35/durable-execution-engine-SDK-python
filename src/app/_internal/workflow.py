@@ -86,7 +86,7 @@ class Workflow:
                 full = FullRequest(**body)
                 ctx = WorkflowContext(execution_id=full.execution_id)
                 InternalEndureClient.mark_execution_as_running(
-                    self.execution_id
+                    full.execution_id
                 )
                 result = self.func(ctx, full.input)
                 if asyncio.iscoroutine(result):

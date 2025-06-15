@@ -8,8 +8,7 @@ from .types import Log, Response
 
 class InternalEndureClient:
 
-    def __init__(self):
-        self._base_url = os.getenv("DURABLE_ENGINE_BASE_URL")
+    _base_url = os.getenv("DURABLE_ENGINE_BASE_URL")
 
     @classmethod
     def send_log(self, execution_id: str, log: Log, action_name: str):
@@ -64,6 +63,5 @@ class InternalEndureClient:
         response.raise_for_status()
         response = Response(
             status=response.status_code,
-            payload=response.json(),
         )
         return response.to_dict()
