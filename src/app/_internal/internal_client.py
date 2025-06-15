@@ -1,6 +1,6 @@
 from dataclasses import asdict
 import os
-from types import Log, Response
+from .types import Log, Response
 import requests 
 
 class InternalEndureClient:

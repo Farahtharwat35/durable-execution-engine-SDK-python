@@ -1,10 +1,7 @@
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 from enum import Enum
-
-
 
 class LogStatus(Enum):
     STARTED = "started"

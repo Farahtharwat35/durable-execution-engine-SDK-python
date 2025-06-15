@@ -1,7 +1,7 @@
 from fastapi import HTTPException
-from ._internal import InternalEndureClient , Log, LogStatus, RetryMechanism
+from app._internal.types import Log, LogStatus, RetryMechanism
+from app._internal.internal_client import InternalEndureClient
 from fastapi import status 
-from datetime import datetime
 import time
 class WorkflowContext:
     """

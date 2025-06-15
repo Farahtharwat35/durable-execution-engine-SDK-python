@@ -1,5 +1,5 @@
-from src.app.workflow_context import WorkflowContext
-from ._internal import ServiceRegistry, Workflow , validate_retention_period
+from app.workflow_context import WorkflowContext
+from app._internal import ServiceRegistry, Workflow , validate_retention_period
 
 class Service :
     def __init__(self, name: str):
@@ -35,7 +35,7 @@ class Service :
         
         Example:
             from my_app import Service
-            from src.app.workflow_context import WorkflowContext
+            from app.workflow_context import WorkflowContext
             
             service = Service("my_service")
             
@@ -59,4 +59,3 @@ class Service :
             registry.register_workflow_in_router(self.name, workflow)
             return func
         return decorator
-        

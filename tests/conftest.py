@@ -1,10 +1,13 @@
+import sys
+import os
 import pytest
-from app import App, Service, WorkflowContext
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app import DurableApp, Service, WorkflowContext
 
 # This fixture provides a fresh App instance for each test that needs it
 @pytest.fixture
 def app():
-    app_instance = App()
+    app_instance = DurableApp()
     yield app_instance
     
 
