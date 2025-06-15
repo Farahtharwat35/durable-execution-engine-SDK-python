@@ -1,7 +1,15 @@
+from dataclasses import asdict
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app._internal import EndureException, ErrorResponse, ServiceRegistry
-from dataclasses import asdict
+
+from app._internal import (
+    EndureException,
+    ErrorResponse,
+    ServiceRegistry,
+)
+
+
 class DurableApp:
     """
     DurableApp is a wrapper class for a FastAPI application that integrates a service discovery endpoint.
@@ -20,7 +28,8 @@ class DurableApp:
                 - idem_retention: The retention policy for idempotency.
     Usage:
         Instantiate DurableApp with a FastAPI app to automatically register the "/discover" endpoint for service discovery and add the registered services to the FastAPI router.
-    """
+    """  # noqa: E501
+
     def __init__(self, app):
         self.app: FastAPI = app
         serviceRegistry = ServiceRegistry.get_instance()
@@ -30,11 +39,8 @@ class DurableApp:
             methods=["GET"],
         )
         self.app.include_router(serviceRegistry.get_router())
-        self.app.add_exception_handler(
-            EndureException,
-            self.raise_exception
-        )
-        
+        self.app.add_exception_handler(EndureException, self.raise_exception)
+
     def _discover(self):
         services = self.serviceRegistry.get_services()
         return {
@@ -54,10 +60,9 @@ class DurableApp:
                 for service_name, workflows in services.items()
             ]
         }
-    
+
     async def raise_exception(request: Request, exc: EndureException):
         return JSONResponse(
             status_code=exc.status_code,
-            content=asdict(ErrorResponse(output=exc.output))
+            content=asdict(ErrorResponse(output=exc.output)),
         )
-    

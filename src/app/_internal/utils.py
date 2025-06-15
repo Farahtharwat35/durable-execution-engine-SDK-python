@@ -1,5 +1,3 @@
-
-
 def validate_retention_period(retention_period: str):
     """
     Validate the retention period format.
@@ -16,4 +14,3 @@ def validate_retention_period(retention_period: str):
         raise ValueError("Retention must be less than or equal to 30.")
     if not isinstance(retention_period, int):
         raise TypeError("Retention must be an integer.")
-    

@@ -1,6 +1,9 @@
 from typing import Dict, List
+
 from fastapi import APIRouter
+
 from .workflow import Workflow
+
 
 class ServiceRegistry:
     """
@@ -20,7 +23,8 @@ class ServiceRegistry:
             Returns the dictionary of registered services and their workflows.
         get_router() -> APIRouter:
             Returns the FastAPI router containing all registered workflow routes.
-    """
+    """  # noqa: E501
+
     _instance = None
     _services: Dict[str, List[Workflow]]
     _router: APIRouter
@@ -37,16 +41,17 @@ class ServiceRegistry:
             self._services[service_name] = []
         self._services[service_name].append(workflow)
 
-    def register_workflow_in_router(self, service_name: str, workflow: Workflow):
+    def register_workflow_in_router(
+        self, service_name: str, workflow: Workflow
+    ):
         self._router.add_api_route(
             f"execute/{service_name}/{workflow.name}",
             workflow.get_handler_route(),
             methods=["POST"],
         )
-            
+
     def get_services(self) -> Dict[str, List[Workflow]]:
         return self._services
 
     def get_router(self) -> APIRouter:
         return self._router
-
