@@ -1,3 +1,4 @@
+# flake8: noqa
 # from fastapi import FastAPI
 
 # # Define a route for the root URL ("/")
