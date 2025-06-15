@@ -1,9 +1,8 @@
 import pytest
-from fastapi import APIRouter
+from app._internal.workflow import Workflow, WorkflowContext
+from app._internal.service_registry import ServiceRegistry
 from typing import Dict, List
-from app._internal import ServiceRegistry
-from app._internal import Workflow
-from app import WorkflowContext
+from fastapi import APIRouter
 
 
 class TestServiceRegistry:
@@ -11,8 +10,7 @@ class TestServiceRegistry:
     def setup_method(self):
         self.registry = ServiceRegistry()
         yield
-        self.registry._services.clear()
-        self.registry._router = APIRouter()
+        self.registry.clear()
 
     def test_register_workflow(self):
         registry = ServiceRegistry()
@@ -80,3 +78,30 @@ class TestServiceRegistry:
 
         assert isinstance(router, APIRouter)
         assert router == registry._router
+
+    def test_register_invalid_service_name(self):
+        def workflow(ctx: WorkflowContext, input: Dict) -> Dict:
+            return {}
+
+        w = Workflow(workflow)
+        with pytest.raises(
+            ValueError, match="Service name must be a non-empty string"
+        ):
+            self.registry.register_workflow("", w)
+        with pytest.raises(ValueError):
+            self.registry.register_workflow(None, w)
+
+    def test_register_duplicate_workflow(self):
+        service_name = "test_service"
+
+        def workflow(ctx: WorkflowContext, input: Dict) -> Dict:
+            return {}
+
+        w1 = Workflow(workflow)
+        w2 = Workflow(workflow)
+
+        self.registry.register_workflow(service_name, w1)
+        with pytest.raises(
+            ValueError, match="Workflow with name .* already exists"
+        ):
+            self.registry.register_workflow(service_name, w2)

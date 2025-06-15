@@ -37,8 +37,18 @@ class ServiceRegistry:
         return cls._instance
 
     def register_workflow(self, service_name: str, workflow: Workflow):
+        if not service_name or not isinstance(service_name, str):
+            raise ValueError("Service name must be a non-empty string")
+        if not workflow or not isinstance(workflow, Workflow):
+            raise ValueError("Workflow must be a valid Workflow instance")
+        
         if service_name not in self._services:
             self._services[service_name] = []
+        
+        # checks for duplicate workflow names within the service
+        if any(w.name == workflow.name for w in self._services[service_name]):
+            raise ValueError(f"Workflow with name '{workflow.name}' already exists in service '{service_name}'")
+        
         self._services[service_name].append(workflow)
 
     def register_workflow_in_router(
@@ -51,7 +61,13 @@ class ServiceRegistry:
         )
 
     def get_services(self) -> Dict[str, List[Workflow]]:
-        return self._services
+        return self._services.copy()
 
     def get_router(self) -> APIRouter:
         return self._router
+    
+    def clear(self):
+        """Clear all registered services and routes"""
+        self._services.clear()
+        self._router = APIRouter()
+
