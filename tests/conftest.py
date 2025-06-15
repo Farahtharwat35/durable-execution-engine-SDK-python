@@ -1,12 +1,13 @@
-# Set environment variables before any imports
 import os
-
-os.environ["DURABLE_ENGINE_BASE_URL"] = "http://test-engine:8000"
-
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from app import DurableApp, Service, WorkflowContext
 from app._internal.types import Response
+
+
+def pytest_configure(config):
+    """Configure test environment before any tests run"""
+    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://engine:8000"
 
 
 @pytest.fixture(autouse=True)
