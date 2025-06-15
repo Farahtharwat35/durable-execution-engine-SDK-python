@@ -45,7 +45,7 @@ class ServiceRegistry:
         self, service_name: str, workflow: Workflow
     ):
         self._router.add_api_route(
-            f"execute/{service_name}/{workflow.name}",
+            f"/execute/{service_name}/{workflow.name}",
             workflow.get_handler_route(),
             methods=["POST"],
         )
