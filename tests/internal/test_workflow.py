@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from typing import Any
 from app._internal.workflow import Workflow
 from app._internal.types import EndureException
@@ -49,42 +50,45 @@ class TestWorkflow:
     async def test_handler_route_successful_execution(
         self, mock_request, mock_internal_client
     ):
-        workflow = Workflow(self.sync_workflow)
-        handler = workflow.get_handler_route()
+        with patch(
+            "app._internal.workflow.InternalEndureClient.mark_execution_as_running"
+        ) as mock_mark_running:
+            workflow = Workflow(self.sync_workflow)
+            handler = workflow.get_handler_route()
 
-        execution_id = "test-execution-id"
-        input_data = {"name": "Farah", "age": 30}
-        mock_request.json.return_value = {
-            "execution_id": execution_id,
-            "input": input_data,
-        }
+            execution_id = "test-execution-id"
+            input_data = {"name": "Farah", "age": 30}
+            mock_request.json.return_value = {
+                "execution_id": execution_id,
+                "input": input_data,
+            }
 
-        # executing the handler
-        result = await handler(mock_request)
+            # executing the handler
+            result = await handler(mock_request)
 
-        assert result == {"output": "Hello, Farah!"}
-        mock_internal_client.mark_execution_as_running.assert_called_once_with(
-            execution_id
-        )
+            assert result == {"output": "Hello, Farah!"}
+            mock_mark_running.assert_called_once_with(execution_id)
 
     @pytest.mark.asyncio
     async def test_handler_route_async_workflow(
         self, mock_request, mock_internal_client
     ):
-        mock_internal_client.mark_execution_as_running.return_value = Response(
-            status_code=200
-        )
-        workflow = Workflow(self.async_workflow)
-        handler = workflow.get_handler_route()
+        with patch(
+            "app._internal.workflow.InternalEndureClient.mark_execution_as_running"
+        ) as mock_mark_running:
+            mock_mark_running.return_value = Response(status_code=200)
+            workflow = Workflow(self.async_workflow)
+            handler = workflow.get_handler_route()
 
-        mock_request.json.return_value = {
-            "execution_id": "test-execution-id",
-            "input": 5,
-        }
+            mock_request.json.return_value = {
+                "execution_id": "test-execution-id",
+                "input": 5,
+            }
 
-        result = await handler(mock_request)
+            result = await handler(mock_request)
 
-        assert result == {"output": 10}
+            assert result == {"output": 10}
+            mock_mark_running.assert_called_once_with("test-execution-id")
 
     @pytest.mark.asyncio
     async def test_handler_route_validation_error(self, mock_request):

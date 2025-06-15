@@ -1,8 +1,5 @@
 import os
-from dataclasses import asdict
-
 import requests
-
 from .types import Log, Response
 
 
@@ -32,11 +29,11 @@ class InternalEndureClient:
 
         url = f"{self._base_url}/executions/execution/{execution_id}/log/{action_name}"
         headers = {"Content-Type": "application/json"}
-        payload = asdict(log)
+        payload = log.to_dict()
         response = requests.patch(url, headers=headers, json=payload)
         response.raise_for_status()
         response = Response(
-            status=response.status_code,
+            status_code=response.status_code,
             payload=response.json(),
         )
         return response.to_dict()
@@ -62,6 +59,6 @@ class InternalEndureClient:
         response = requests.patch(url, headers=headers)
         response.raise_for_status()
         response = Response(
-            status=response.status_code,
+            status_code=response.status_code,
         )
         return response.to_dict()

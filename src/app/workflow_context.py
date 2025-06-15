@@ -90,7 +90,7 @@ class WorkflowContext:
             )
             if not engine_response:
                 raise RuntimeError("Failed to mark execution as running.")
-            status_code = engine_response.status_code
+            status_code = engine_response["status_code"]
             match status_code:
                 case status.HTTP_201_CREATED | status.HTTP_200_OK:
                     result = action(input_data)
@@ -105,7 +105,7 @@ class WorkflowContext:
                     )
                     return result
                 case status.HTTP_208_ALREADY_REPORTED:
-                    output = engine_response.payload.get("output")
+                    output = engine_response.get("payload", {}).get("output")
                     return output if output else {}
 
         except HTTPException as e:
@@ -121,15 +121,20 @@ class WorkflowContext:
             engine_response = InternalEndureClient.send_log(
                 self.execution_id, log, action.__name__
             )
-            status_code = engine_response.status_code
+            status_code = engine_response["status_code"]
             # Retry logic based on the retry mechanism
             while status_code == status.HTTP_200_OK:
                 try:
-                    retry_at_unix = engine_response.payload.get("retry_at")
-                    if retry_at_unix:
-                        sleep_seconds = retry_at_unix - time.time()
-                        if sleep_seconds > 0:
-                            time.sleep(sleep_seconds)
+                    retry_at_unix = engine_response.get("payload", {}).get(
+                        "retry_at"
+                    )
+                    if not retry_at_unix:
+                        raise RuntimeError(
+                            "Missing retry_at in response payload"
+                        )
+                    sleep_seconds = retry_at_unix - time.time()
+                    if sleep_seconds > 0:
+                        time.sleep(sleep_seconds)
                     result = action(input_data)
                     log = Log(
                         status=LogStatus.COMPLETED,
@@ -151,4 +156,8 @@ class WorkflowContext:
                         log,
                         action.__name__,
                     )
-                    status_code = engine_response.status_code
+                    status_code = engine_response["status_code"]
+                    if status_code != status.HTTP_200_OK:
+                        raise RuntimeError(
+                            f"Action execution failed: {str(e)}"
+                        )
