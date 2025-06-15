@@ -1,9 +1,9 @@
 format:
-	black .
-	isort .
+	poetry run black .
+	poetry run isort .
 lint:
-	flake8 .
+	poetry run flake8 .
 test:
-	python -m pytest test/ --verbose
+	poetry run python -m pytest test/ --verbose
 
 
