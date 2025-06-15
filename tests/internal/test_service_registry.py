@@ -1,7 +1,7 @@
 import pytest
 from app._internal.workflow import Workflow, WorkflowContext
 from app._internal.service_registry import ServiceRegistry
-from typing import Dict, List
+from typing import Dict
 from fastapi import APIRouter
 
 

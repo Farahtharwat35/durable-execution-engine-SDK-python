@@ -1,8 +1,6 @@
 from unittest.mock import AsyncMock, patch
 import pytest
 from app import DurableApp, Service, WorkflowContext
-from fastapi import Request
-from pydantic import ValidationError
 
 
 # This fixture provides a fresh App instance for each test that needs it
@@ -23,10 +21,12 @@ def workflow_context():
     context = WorkflowContext()
     yield context
 
+
 @pytest.fixture
 def mock_internal_client():
-    with patch('app._internal.workflow.InternalEndureClient') as mock:
+    with patch("app._internal.workflow.InternalEndureClient") as mock:
         yield mock
+
 
 @pytest.fixture
 async def mock_request():
