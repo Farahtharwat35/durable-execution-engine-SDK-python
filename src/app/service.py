@@ -1,0 +1,64 @@
+from src.app.workflow_context import WorkflowContext
+from .service_registry import ServiceRegistry
+from .workflow import Workflow
+from utils import validate_retention_period , validate_input
+
+class Service :
+    def __init__(self, name: str):
+        self.name = name
+        
+    def workflow(self,**config):
+        """
+        Decorator that registers a function as a workflow in the service registry.
+        
+        This decorator validates the workflow function signature, creates a Workflow 
+        instance, and registers it with the ServiceRegistry for execution through 
+        the API router.
+        
+        Args:
+            **config: Configuration options for the workflow.
+                - retention (int, optional): Number of days to retain workflow 
+                execution history and state. Must be a positive integer. 
+                Default: 7 days.
+        
+        Returns:
+            callable: The original function (unmodified), which can now be executed 
+                    as a registered workflow.
+        
+        Raises:
+            ValueError: If the retention period is invalid (not a positive integer).
+            ValueError: If the workflow function doesn't have exactly two parameters
+                    named 'input' and 'ctx'.
+            ValueError: If the 'ctx' parameter isn't annotated with WorkflowContext type.
+        
+        Requirements:
+            - Workflow function must have exactly two parameters: 'input' and 'ctx'
+            - The 'ctx' parameter must be type-annotated as WorkflowContext
+        
+        Example:
+            from my_app import Service
+            from src.app.workflow_context import WorkflowContext
+            
+            service = Service("my_service")
+            
+            @service.workflow(retention=30)
+            def process_order(input: dict, ctx: WorkflowContext):
+        Notes:
+            Once registered, the workflow can be invoked via the API endpoint:
+            POST /execute/{service_name}/{workflow_name}
+        """
+        def decorator(func):
+            retention_period = config.get('retention', 7)
+            validate_retention_period(retention_period)
+            input_keys = func.__code__.co_varnames[:func.__code__.co_argcount]
+            if ('input' and 'ctx' not in input_keys) or len(input_keys) != 2:
+                raise ValueError("The workflow function must have an 'input' and 'ctx' argument.")
+            if not isinstance(func.__annotations__.get('ctx'), WorkflowContext):
+                raise ValueError("The 'ctx' argument must be of type WorkflowContext.")
+            workflow = Workflow(func, retention_period)
+            registry = ServiceRegistry.get_instance()
+            registry.register_workflow(self.name, workflow)
+            registry.register_workflow_in_router(self.name, workflow)
+            return func
+        return decorator
+        
