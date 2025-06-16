@@ -2,20 +2,33 @@ import os
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from app import DurableApp, Service, WorkflowContext
-from app._internal.types import Response
+from app._internal.types import Response, Log, LogStatus, RetryMechanism
+from app._internal.internal_client import InternalEndureClient
 
 
 def pytest_configure(config):
     """Configure test environment before any tests run"""
-    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://engine:8000"
+    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://test-engine:8000"
+    InternalEndureClient._base_url = "http://test-engine:8000"
+
+
+def setup_module(module):
+    """Setup module-level test environment"""
+    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://test-engine:8000"
+    InternalEndureClient._base_url = "http://test-engine:8000"
 
 
 @pytest.fixture(autouse=True)
 def cleanup_test_env():
-    """Clean up test environment variables after each test"""
+    """Setup and cleanup test environment for each test"""
+    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://test-engine:8000"
+    InternalEndureClient._base_url = "http://test-engine:8000"
+
     yield
+
     if "DURABLE_ENGINE_BASE_URL" in os.environ:
         del os.environ["DURABLE_ENGINE_BASE_URL"]
+    InternalEndureClient._base_url = None
 
 
 # This fixture provides a fresh App instance for each test that needs it
@@ -70,3 +83,13 @@ def sample_action():
         return {"result": input_data}
 
     return action
+
+
+@pytest.fixture
+def sample_log():
+    return Log(
+        status=LogStatus.STARTED,
+        input={"test": "data"},
+        max_retries=3,
+        retry_mechanism=RetryMechanism.EXPONENTIAL,
+    )
