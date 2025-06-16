@@ -1,7 +1,7 @@
 import asyncio
-from typing import Any, Callable, get_type_hints
+from typing import Any, Callable, Union, get_type_hints , get_origin, get_args
 
-from fastapi import Request, status
+from fastapi import Request, status, HTTPException, types
 from pydantic import ValidationError, create_model
 
 from app.workflow_context import WorkflowContext
@@ -41,6 +41,57 @@ class Workflow:
         self.retention_period = retention_period
         self.input, self.output = self._get_io(func)
 
+    def _get_type_description(self, typ):
+        if typ is Any:
+            return "Any"
+        # Normalize NoneType to "None"
+        if typ is type(None):
+            return "None"
+
+        origin = get_origin(typ)
+        args = get_args(typ)
+
+        # Handle Union and | (UnionType in Python 3.10+)
+        if origin in (Union, types.UnionType):
+            type_names = [self._get_type_description(arg) for arg in args]
+            return " | ".join(sorted(type_names, key=lambda x: (x == "None", x)))
+        
+        # Case: User-defined class
+        if hasattr(typ, '__annotations__') and not origin:
+            fields = getattr(typ, '__annotations__', {})
+            return {
+                name: self._get_type_description(t)
+                for name, t in fields.items()
+            }
+
+        # Case: Generic container like list[Class], dict[str, Class], etc.
+        if origin:
+            origin_name = origin.__name__ if hasattr(origin, '__name__') else str(origin)
+
+            # Special case: dict[str, SomeClass]
+            if origin is dict and len(args) == 2:
+                key_type = self._get_type_description(args[0])
+                value_type = self._get_type_description(args[1])
+                return f"{origin_name}[{key_type}, {value_type}]"
+
+            # Case: list[SomeClass] or other single-arg generics
+            elif len(args) == 1:
+                inner_type = self._get_type_description(args[0])
+                return f"{origin_name}[{inner_type}]"
+
+            # Fallback for multi-arg generics like tuple[int, str]
+            else:
+                inner_types = [self._get_type_description(arg) for arg in args]
+                return f"{origin_name}[{', '.join(inner_types)}]"
+
+        # Case: Primitive or normal class
+        if isinstance(typ, type):
+            return typ.__name__
+
+        # Fallback: stringify (removes "typing." prefix)
+        return str(typ).replace("typing.", "")
+
+
     def _get_io(self, func):
         """
         Extract input and output type information from the function's type hints.
@@ -53,8 +104,12 @@ class Workflow:
                   aren't provided, Any is used as a fallback.
         """  # noqa: E501
         hints = get_type_hints(func)
-        return hints.get("input", Any), hints.get("return", Any)
+        input_type = hints.get("input", Any)
+        output_type = hints.get("return", Any)
 
+        return self._get_type_description(input_type), self._get_type_description(output_type)
+    
+   
     def get_handler_route(self):
         """
         Generate a FastAPI-compatible route handler for the workflow function.
@@ -74,35 +129,27 @@ class Workflow:
             - The handler expects a JSON request with 'execution_id' and 'input' fields.
             - Both synchronous and asynchronous workflow functions are supported.
         """  # noqa: E501
-        FullRequest = create_model(
-            f"{self.name}Request",
-            execution_id=(str, ...),
-            input=(self.input, ...),
-        )
-
+      
         async def handler(request: Request):
             try:
                 body = await request.json()
-                full = FullRequest(**body)
-                ctx = WorkflowContext(execution_id=full.execution_id)
+                ctx = WorkflowContext(execution_id=body['execution_id'])
                 InternalEndureClient.mark_execution_as_running(
-                    full.execution_id
+                    body['execution_id']
                 )
-                result = self.func(ctx, full.input)
+                result = self.func(ctx, body['input'])
                 if asyncio.iscoroutine(result):
                     result = await result
                 return {"output": result}
-            except ValidationError as ve:
-                print(f"Validation error: {ve}")
+            except HTTPException as he:
                 raise EndureException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=he.status_code,
                     output={
-                        "error": "Validation error",
-                        "details": ve.errors(),
+                        "error":  he.detail,
+                        "details": he.errors(),
                     },
                 )
             except Exception as e:
-                print(f"Error in workflow handler: {e}")
                 raise EndureException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     output={
