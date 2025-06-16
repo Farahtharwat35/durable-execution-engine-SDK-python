@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Any, Callable, Union, get_type_hints , get_origin, get_args
 
 from fastapi import Request, status, HTTPException, types
@@ -109,7 +110,6 @@ class Workflow:
 
         return self._get_type_description(input_type), self._get_type_description(output_type)
     
-   
     def get_handler_route(self):
         """
         Generate a FastAPI-compatible route handler for the workflow function.
@@ -122,40 +122,58 @@ class Workflow:
             Callable: An async function that can be registered as a FastAPI route handler.
 
         Raises:
-            HTTPException: With status code 400 for validation errors or 500 for
-                          other exceptions during handler creation or execution.
+            EndureException: With appropriate status code and error details.
+                           400 for validation/request errors, 500 for internal errors.
 
         Notes:
             - The handler expects a JSON request with 'execution_id' and 'input' fields.
             - Both synchronous and asynchronous workflow functions are supported.
         """  # noqa: E501
-      
+        
         async def handler(request: Request):
             try:
                 body = await request.json()
-                ctx = WorkflowContext(execution_id=body['execution_id'])
-                InternalEndureClient.mark_execution_as_running(
-                    body['execution_id']
+            except (json.JSONDecodeError, ValueError):
+                raise EndureException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    output={"error": "Invalid JSON format"}
                 )
-                result = self.func(ctx, body['input'])
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return {"output": result}
+
+            if not isinstance(body, dict):
+                raise EndureException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    output={"error": "Request body must be a JSON object"}
+                )
+
+            if 'execution_id' not in body or 'input' not in body:
+                raise EndureException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    output={"error": "Request must include 'execution_id' and 'input' fields"}
+                )
+
+            ctx = WorkflowContext(execution_id=body['execution_id'])
+            InternalEndureClient.mark_execution_as_running(body['execution_id'])
+
+            try:
+                output = self.func(ctx, body['input'])
+                if asyncio.iscoroutine(output):
+                    output = await output
+                return {"output": output}
             except HTTPException as he:
                 raise EndureException(
                     status_code=he.status_code,
-                    output={
-                        "error":  he.detail,
-                        "details": he.errors(),
-                    },
+                    output={"error": he.detail}
+                )
+            except ValidationError as ve:
+                raise EndureException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    output={"error": "Validation error", "details": str(ve)}
                 )
             except Exception as e:
                 raise EndureException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    output={
-                        "error": "Internal server error",
-                        "details": str(e),
-                    },
+                    output={"error": "Internal server error", "details": str(e)}
                 )
-
+        
         return handler
+        

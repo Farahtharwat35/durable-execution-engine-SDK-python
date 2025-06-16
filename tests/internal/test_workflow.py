@@ -1,10 +1,12 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from typing import Any
 from app._internal.workflow import Workflow
 from app._internal.types import EndureException
 from app.workflow_context import WorkflowContext
 from starlette.responses import Response
+from fastapi import HTTPException
+from pydantic import ValidationError, BaseModel
 
 class InputModel:
     name: str
@@ -19,7 +21,18 @@ class OutputModel:
         self.success = success
         self.data = data or {}
         self.timestamps = timestamps or []
+
 class TestWorkflow:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        # Clear any state before each test
+        yield
+        # Cleanup after each test
+
+    @pytest.fixture
+    def mock_request(self):
+        return AsyncMock()
+
     @staticmethod
     def sync_workflow(ctx: WorkflowContext, input: dict) -> str:
         return f"Hello, {input['name']}!"
@@ -200,8 +213,109 @@ class TestWorkflow:
             "input": "test-input",
         }
 
+        with patch('app._internal.workflow.InternalEndureClient.mark_execution_as_running') as mock_mark_running:
+            mock_mark_running.return_value = None
+            with pytest.raises(EndureException) as exc_info:
+                await handler(mock_request)
+
+            assert exc_info.value.status_code == 500
+            assert exc_info.value.output["error"] == "Internal server error"
+
+    @pytest.mark.asyncio
+    async def test_missing_required_fields(self, mock_request):
+        """Test handling of requests missing required fields."""
+        workflow = Workflow(self.sync_workflow)
+        handler = workflow.get_handler_route()
+
+        mock_request.json.return_value = {}
+
         with pytest.raises(EndureException) as exc_info:
             await handler(mock_request)
 
-        assert exc_info.value.status_code == 500
-        assert "Internal server error" == str(exc_info.value.output["error"])
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.output["error"] == "Request must include 'execution_id' and 'input' fields"
+
+    @pytest.mark.asyncio
+    async def test_invalid_input_type(self, mock_request):
+        """Test handling of invalid input type for workflow."""
+        workflow = Workflow(self.sync_workflow)
+        handler = workflow.get_handler_route()
+
+        with patch('app._internal.workflow.InternalEndureClient.mark_execution_as_running') as mock_mark_running:     
+            mock_mark_running.return_value = None
+            mock_request.json.return_value = {
+                "execution_id": "test-id",
+                "input": 123  # Invalid input type for sync_workflow (expects dict)
+            }
+
+            with pytest.raises(EndureException) as exc_info:
+                await handler(mock_request)
+
+            assert exc_info.value.status_code == 500
+            assert "'int' object is not subscriptable" == str(exc_info.value.output["details"])
+
+    @pytest.mark.asyncio
+    async def test_malformed_json(self, mock_request):
+        """Test handling of malformed JSON in request."""
+        workflow = Workflow(self.sync_workflow)
+        handler = workflow.get_handler_route()
+
+        mock_request.json.side_effect = ValueError("Invalid JSON format")
+
+        with pytest.raises(EndureException) as exc_info:
+            await handler(mock_request)
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.output["error"] == "Invalid JSON format"
+
+    @pytest.mark.asyncio
+    async def test_workflow_http_exception(self, mock_request):
+        """Test handling of HTTPException raised from within workflow."""
+        async def failing_workflow(ctx: WorkflowContext, input: dict) -> str:
+            raise HTTPException(
+                status_code=403,
+                detail="Custom error message"
+            )
+
+        workflow = Workflow(failing_workflow)
+        handler = workflow.get_handler_route()
+        
+        with patch('app._internal.workflow.InternalEndureClient.mark_execution_as_running') as mock_mark_running:
+            mock_mark_running.return_value = None
+            mock_request.json.return_value = {
+                "execution_id": "test-id",
+                "input": {}
+            }
+
+            with pytest.raises(EndureException) as exc_info:
+                await handler(mock_request)
+
+            assert exc_info.value.status_code == 403
+            assert exc_info.value.output["error"] == "Custom error message"
+
+    @pytest.mark.asyncio
+    async def test_workflow_validation_exception(self, mock_request):
+        """Test handling of validation exceptions raised from within workflow."""
+        class TestModel(BaseModel):
+            required_field: str
+
+        async def failing_workflow(ctx: WorkflowContext, input: dict) -> str:
+            # This will raise a ValidationError because required_field is missing
+            TestModel(**input)
+            return "should not reach here"
+
+        workflow = Workflow(failing_workflow)
+        handler = workflow.get_handler_route()
+
+        with patch('app._internal.workflow.InternalEndureClient.mark_execution_as_running') as mock_mark_running:
+            mock_mark_running.return_value = None
+            mock_request.json.return_value = {
+                "execution_id": "test-id",
+                "input": {}
+            }
+
+            with pytest.raises(EndureException) as exc_info:
+                await handler(mock_request)
+
+            assert exc_info.value.status_code == 422
+            assert "validation error" in exc_info.value.output["error"].lower()

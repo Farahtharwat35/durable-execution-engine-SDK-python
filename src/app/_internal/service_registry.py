@@ -72,3 +72,4 @@ class ServiceRegistry:
         """Clear all registered services and routes"""
         self._services.clear()
         self._router = APIRouter()
+        self.__class__._instance = None
