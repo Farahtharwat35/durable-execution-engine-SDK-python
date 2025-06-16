@@ -73,3 +73,4 @@ class ServiceRegistry:
         self._services.clear()
         self._router = APIRouter()
         self.__class__._instance = None
+        self.__class__()

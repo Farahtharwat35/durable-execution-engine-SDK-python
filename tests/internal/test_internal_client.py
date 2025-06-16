@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fastapi import status
 
 from app._internal.internal_client import InternalEndureClient
-from app._internal.types import Log, LogStatus, Response
+from app.types import Log, LogStatus, Response
 
 
 class TestInternalClient:

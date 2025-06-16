@@ -8,7 +8,7 @@ from pydantic import ValidationError, create_model
 from app.workflow_context import WorkflowContext
 
 from .internal_client import InternalEndureClient
-from .types import EndureException
+from ..types import EndureException
 
 
 class Workflow:
@@ -159,6 +159,9 @@ class Workflow:
                 if asyncio.iscoroutine(output):
                     output = await output
                 return {"output": output}
+            except EndureException:
+                # re-raising EndureException to preserve its status code
+                raise
             except HTTPException as he:
                 raise EndureException(
                     status_code=he.status_code,

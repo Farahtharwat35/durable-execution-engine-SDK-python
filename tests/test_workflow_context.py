@@ -1,4 +1,4 @@
-from app._internal.types import LogStatus, RetryMechanism, Response
+from app.types import LogStatus, RetryMechanism, Response
 import pytest
 from unittest.mock import patch
 from fastapi import status, HTTPException

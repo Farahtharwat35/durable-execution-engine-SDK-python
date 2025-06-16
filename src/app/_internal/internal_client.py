@@ -1,6 +1,6 @@
 import os
 import requests
-from .types import Log, Response
+from ..types import Log, Response
 
 
 class InternalEndureClient:

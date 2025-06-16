@@ -9,6 +9,7 @@ from app.workflow_context import WorkflowContext
 class Service:
     def __init__(self, name: str):
         self.name = name
+        self.registry = ServiceRegistry() 
 
     def workflow(self, **config):
         """
@@ -65,9 +66,8 @@ class Service:
                     "The 'ctx' argument must be of type WorkflowContext."
                 )
             workflow = Workflow(func, retention_period)
-            registry = ServiceRegistry()
-            registry.register_workflow(self.name, workflow)
-            registry.register_workflow_in_router(self.name, workflow)
+            self.registry.register_workflow(self.name, workflow)
+            self.registry.register_workflow_in_router(self.name, workflow)
             return func
 
         return decorator

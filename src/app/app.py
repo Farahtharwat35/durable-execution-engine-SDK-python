@@ -4,11 +4,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app._internal import (
-    EndureException,
-    ErrorResponse,
     ServiceRegistry,
 )
-
+from app.types import EndureException, ErrorResponse
 
 class DurableApp:
     """
@@ -32,13 +30,14 @@ class DurableApp:
 
     def __init__(self, app):
         self.app: FastAPI = app
-        serviceRegistry = ServiceRegistry.get_instance()
-        serviceRegistry.get_router().add_api_route(
+        self.serviceRegistry = ServiceRegistry()
+        self.serviceRegistry.get_router().add_api_route(
             "/discover",
+                
             self._discover,
             methods=["GET"],
         )
-        self.app.include_router(serviceRegistry.get_router())
+        self.app.include_router(self.serviceRegistry.get_router())
         self.app.add_exception_handler(EndureException, self.raise_exception)
 
     def _discover(self):
@@ -52,7 +51,7 @@ class DurableApp:
                             "name": workflow.name,
                             "input": workflow.input,
                             "output": workflow.output,
-                            "idem_retention": workflow.retention,
+                            "idem_retention": workflow.retention_period,
                         }
                         for workflow in workflows
                     ],
@@ -61,7 +60,16 @@ class DurableApp:
             ]
         }
 
-    async def raise_exception(request: Request, exc: EndureException):
+    async def raise_exception(self, request: Request, exc: EndureException, _=None):
+        """
+        Exception handler for EndureException.
+        Args:
+            request: The FastAPI request object
+            exc: The EndureException that was raised
+            _: An optional unused parameter that may be provided by FastAPI's exception handler
+        Returns:
+            JSONResponse: A response with the exception's status code and output
+        """
         return JSONResponse(
             status_code=exc.status_code,
             content=asdict(ErrorResponse(output=exc.output)),

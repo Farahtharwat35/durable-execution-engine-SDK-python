@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from app._internal.internal_client import (
     InternalEndureClient,
 )
-from app._internal.types import (
+from app.types import (
     Log,
     LogStatus,
     RetryMechanism,

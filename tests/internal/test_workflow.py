@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from typing import Any
 from app._internal.workflow import Workflow
-from app._internal.types import EndureException
+from app.types import EndureException
 from app.workflow_context import WorkflowContext
 from starlette.responses import Response
 from fastapi import HTTPException
