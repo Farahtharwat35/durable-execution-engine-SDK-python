@@ -1,16 +1,16 @@
-def validate_retention_period(retention_period: str):
+def validate_retention_period(retention: int) -> None:
     """
-    Validate the retention period format.
+    Validate that the retention period is a non-negative integer.
 
     Args:
-        retention_period (str): The retention period string to validate.
+        retention (int): The retention period in days.
 
-    Returns:
-        None: If the retention period is valid.
+    Raises:
+        ValueError: If the retention period is not a non-negative integer.
     """
-    if retention_period < 0:
-        raise ValueError("Retention must be a non-negative integer.")
-    if retention_period > 30:
-        raise ValueError("Retention must be less than or equal to 30.")
-    if not isinstance(retention_period, int):
-        raise TypeError("Retention must be an integer.")
+    if not isinstance(retention, int):
+        raise ValueError("Retention period must be an integer.")
+    if retention < 0:
+        raise ValueError("Retention period must be a non-negative integer.")
+    if retention > 30:
+        raise ValueError("Retention period cannot exceed 30 days.")

@@ -9,7 +9,14 @@ import sys
 
 from .internal_client import InternalEndureClient
 from .service_registry import ServiceRegistry
-from .types import EndureException, ErrorResponse
+from .types import (
+    EndureException,
+    ErrorResponse,
+    Response,
+    Log,
+    LogStatus,
+    RetryMechanism,
+)
 from .utils import validate_retention_period
 from .workflow import Workflow
 
@@ -48,6 +55,10 @@ __all__ = [
     "ErrorResponse",
     "InternalEndureClient",
     "ServiceRegistry",
+    "Log",
+    "LogStatus",
+    "RetryMechanism",
     "validate_retention_period",
+    "Response",
     "Workflow",
 ]

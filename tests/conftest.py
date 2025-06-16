@@ -2,14 +2,14 @@ import os
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from app import DurableApp, Service, WorkflowContext
-from app._internal.types import Response, Log, LogStatus, RetryMechanism
-from app._internal.internal_client import InternalEndureClient
-
-
-def pytest_configure(config):
-    """Configure test environment before any tests run"""
-    os.environ["DURABLE_ENGINE_BASE_URL"] = "http://test-engine:8000"
-    InternalEndureClient._base_url = "http://test-engine:8000"
+from app._internal import (
+    Log,
+    LogStatus,
+    RetryMechanism,
+    InternalEndureClient,
+    ServiceRegistry,
+    Response,
+)
 
 
 def setup_module(module):
@@ -93,3 +93,12 @@ def sample_log():
         max_retries=3,
         retry_mechanism=RetryMechanism.EXPONENTIAL,
     )
+
+
+@pytest.fixture(autouse=True)
+def clear_registry():
+    """Clear the registry before each test"""
+    registry = ServiceRegistry()
+    registry.clear()
+    yield
+    registry.clear()

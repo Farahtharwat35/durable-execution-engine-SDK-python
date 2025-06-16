@@ -21,7 +21,7 @@ class Service:
         Args:
             **config: Configuration options for the workflow.
                 - retention (int, optional): Number of days to retain workflow
-                execution history and state. Must be a positive integer.
+                execution history and state. Must be a non-negative integer.
                 Default: 7 days.
 
         Returns:
@@ -29,7 +29,7 @@ class Service:
                     as a registered workflow.
 
         Raises:
-            ValueError: If the retention period is invalid (not a positive integer).
+            ValueError: If the retention period is invalid (not a non-negative integer).
             ValueError: If the workflow function doesn't have exactly two parameters
                     named 'input' and 'ctx'.
             ValueError: If the 'ctx' parameter isn't annotated with WorkflowContext type.
@@ -41,6 +41,7 @@ class Service:
         Example:
             from my_app import Service
             from app.workflow_context import WorkflowContext
+            from typing import Dict, Any
 
             service = Service("my_service")
 
@@ -59,15 +60,12 @@ class Service:
                 raise ValueError(
                     "The workflow function must have an 'input' and 'ctx' argument."
                 )
-            if not isinstance(
-                func.__annotations__.get("ctx"),
-                WorkflowContext,
-            ):
+            if func.__annotations__.get("ctx") != WorkflowContext:
                 raise ValueError(
                     "The 'ctx' argument must be of type WorkflowContext."
                 )
             workflow = Workflow(func, retention_period)
-            registry = ServiceRegistry.get_instance()
+            registry = ServiceRegistry()
             registry.register_workflow(self.name, workflow)
             registry.register_workflow_in_router(self.name, workflow)
             return func
