@@ -19,6 +19,7 @@ class TestApp:
         
         self.mock_mark_running = self.mark_running_patcher.start()
         self.mock_send_log = self.send_log_patcher.start()
+        self.mock_mark_running.return_value = {"status_code": 200}
         self.mock_send_log.return_value = {"status_code": 200}
         
         yield
