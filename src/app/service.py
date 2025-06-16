@@ -9,7 +9,7 @@ from app.workflow_context import WorkflowContext
 class Service:
     def __init__(self, name: str):
         self.name = name
-        self.registry = ServiceRegistry() 
+        self.registry = ServiceRegistry()
 
     def workflow(self, **config):
         """

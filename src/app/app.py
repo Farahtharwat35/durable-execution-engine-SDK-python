@@ -8,6 +8,7 @@ from app._internal import (
 )
 from app.types import EndureException, ErrorResponse
 
+
 class DurableApp:
     """
     DurableApp is a wrapper class for a FastAPI application that integrates a service discovery endpoint.
@@ -33,7 +34,6 @@ class DurableApp:
         self.serviceRegistry = ServiceRegistry()
         self.serviceRegistry.get_router().add_api_route(
             "/discover",
-                
             self._discover,
             methods=["GET"],
         )
@@ -60,7 +60,9 @@ class DurableApp:
             ]
         }
 
-    async def raise_exception(self, request: Request, exc: EndureException, _=None):
+    async def raise_exception(
+        self, request: Request, exc: EndureException, _=None
+    ):
         """
         Exception handler for EndureException.
         Args:
