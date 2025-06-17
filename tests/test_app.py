@@ -30,7 +30,6 @@ class TestApp:
 
         self.mark_running_patcher.stop()
         self.send_log_patcher.stop()
-        ServiceRegistry().clear()
         self.app = None
         self.durable_app = None
         self.client = None

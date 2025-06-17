@@ -14,8 +14,15 @@ class InternalEndureClient:
 
         Args:
             execution_id (str): The ID of the execution context.
-            log (dict): The log message to send.
+            log (Log): The log message object to send.
             action_name (str): The name of the action.
+
+        Returns:
+            dict: A dictionary containing the response from the Durable Execution Engine.
+
+        Raises:
+            ValueError: If DURABLE_ENGINE_BASE_URL is not set or if required parameters are missing.
+            requests.exceptions.HTTPError: If the request fails.
         """  # noqa: E501
         if not self._base_url:
             raise ValueError(
@@ -41,10 +48,17 @@ class InternalEndureClient:
     @classmethod
     def mark_execution_as_running(self, execution_id: str):
         """
-        Marks an execution as running.
+        Marks an execution as running in the Durable Execution Engine.
 
         Args:
             execution_id (str): The ID of the execution context.
+
+        Returns:
+            dict: A dictionary containing the response from the Durable Execution Engine.
+
+        Raises:
+            ValueError: If DURABLE_ENGINE_BASE_URL is not set or if execution_id is missing.
+            requests.exceptions.HTTPError: If the request fails.
         """
         if not self._base_url:
             raise ValueError(

@@ -27,11 +27,6 @@ class OutputModel:
 
 
 class TestWorkflow:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        # Clear any state before each test
-        yield
-        # Cleanup after each test
 
     @pytest.fixture
     def mock_request(self):

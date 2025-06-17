@@ -115,16 +115,13 @@ class TestService:
         service.workflow(retention=0)(workflow1)
         service.workflow(retention=20)(workflow2)
 
-        # Get the registry instance
         registry = ServiceRegistry()
         services = registry.get_services()
 
-        # Verify both workflows are registered
         assert service.name in services
         workflow_instances = services[service.name]
         assert len(workflow_instances) == 2
 
-        # Get workflow names and retention periods
         workflow_info = [
             (w.name, w.retention_period) for w in workflow_instances
         ]

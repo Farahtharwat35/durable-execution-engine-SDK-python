@@ -15,16 +15,25 @@ class Workflow:
     """
     Represents a workflow function that can be executed through a FastAPI endpoint.
 
-    A Workflow encapsulates a function and manages its execution through the durable
-    execution engine. It extracts type information from the function signature
-    and provides a FastAPI-compatible handler route.
+    A Workflow encapsulates a Python function and manages its execution through the durable
+    execution engine. It extracts detailed type information from the function signature,
+    including support for complex types like Unions, generics, and user-defined classes,
+    and provides a FastAPI-compatible handler route with comprehensive error handling.
 
     Attributes:
         func (Callable): The workflow function to be executed.
         name (str): The name of the workflow (derived from function name).
         retention_period (int, optional): Number of days to retain workflow execution history.
-        input (Any): The input type of the workflow function (from type hints).
-        output (Any): The return type of the workflow function (from type hints).
+        input (Any): Structured description of the input type (derived from type hints).
+        output (Any): Structured description of the return type (derived from type hints).
+
+    Example:
+        @workflow
+        def process_data(ctx: WorkflowContext, input: dict[str, int]) -> list[str]:
+            # This will be wrapped in a Workflow instance with:
+            # - name: "process_data"
+            # - input: "dict[str, int]"
+            # - output: "list[str]"
     """  # noqa: E501
 
     def __init__(self, func: Callable, retention_period: int = None):
@@ -32,10 +41,16 @@ class Workflow:
         Initialize a new Workflow instance.
 
         Args:
-            func (Callable): The workflow function to wrap. Must have parameters
-                             'input' and 'ctx' where 'ctx' is a WorkflowContext.
+            func (Callable): The workflow function to wrap. Must have exactly two parameters:
+                          - ctx: WorkflowContext - The workflow execution context
+                          - input: Any - The input parameter with optional type annotation
+                          The function can be either synchronous or asynchronous.
             retention_period (int, optional): Number of days to retain workflow execution
                                             history and state. Default is None.
+
+        Note:
+            The function's type hints are used to generate input/output type descriptions,
+            falling back to Any if no type hints are provided.
         """  # noqa: E501
         self.func = func
         self.name = func.__name__
@@ -43,16 +58,38 @@ class Workflow:
         self.input, self.output = self._get_io(func)
 
     def _get_type_description(self, typ):
+        """
+        Recursively analyze a type annotation and convert it to a structured description.
+        Handles complex Python type hints including:
+        - Basic types (int, str, etc.)
+        - Unions (Union[A, B] or A | B)
+        - Optional types (Optional[T] or T | None)
+        - Generic containers (list[T], dict[K, V])
+        - User-defined classes (converted to field dictionaries)
+
+        Args:
+            typ: The type to analyze (can be a type hint, class, or Any)
+
+        Returns:
+            Union[str, dict]: A string for simple types or a dict for complex types,
+                            representing the structure of the type.
+
+        Example:
+            >>> _get_type_description(dict[str, list[int]])
+            "dict[str, list[int]]"
+            >>> _get_type_description(Optional[MyClass])
+            "MyClass | None"
+        """
         if typ is Any:
             return "Any"
-        # Normalize NoneType to "None"
+
         if typ is type(None):
             return "None"
 
         origin = get_origin(typ)
         args = get_args(typ)
 
-        # Handle Union and | (UnionType in Python 3.10+)
+        # Union and | (UnionType in Python 3.10+)
         if origin in (Union, types.UnionType):
             type_names = [self._get_type_description(arg) for arg in args]
             return " | ".join(
@@ -98,14 +135,20 @@ class Workflow:
 
     def _get_io(self, func):
         """
-        Extract input and output type information from the function's type hints.
+        Extracts and analyze input and output type information from the function's type hints.
 
         Args:
             func (Callable): The workflow function to analyze.
 
         Returns:
-            tuple: A tuple containing (input_type, output_type). If type hints
-                  aren't provided, Any is used as a fallback.
+            tuple: A tuple containing (input_type, output_type), where each is either:
+                  - A string representing a simple type (e.g., "int", "str")
+                  - A string representing a complex type (e.g., "list[int]", "dict[str, MyClass]")
+                  - A dict representing the structure of a user-defined class
+                  If type hints aren't provided, "Any" is used as a fallback.
+
+        Note:
+            Uses _get_type_description to convert raw type hints into structured descriptions.
         """  # noqa: E501
         hints = get_type_hints(func)
         input_type = hints.get("input", Any)
@@ -119,20 +162,32 @@ class Workflow:
         """
         Generate a FastAPI-compatible route handler for the workflow function.
 
-        Creates a dynamic Pydantic model for request validation and an async handler
-        that processes incoming requests, sets up the workflow context, executes
-        the workflow function, and returns the result.
+        Creates an async handler that processes incoming requests, sets up the workflow context,
+        marks the execution as running, executes the workflow function, and returns the result.
 
         Returns:
             Callable: An async function that can be registered as a FastAPI route handler.
 
-        Raises:
-            EndureException: With appropriate status code and error details.
-                           400 for validation/request errors, 500 for internal errors.
+        Request Format:
+            Expects a JSON object with:
+            - execution_id (str): Unique identifier for the workflow execution
+            - input (Any): Input data matching the workflow's input type
+
+        Response Format:
+            Returns a JSON object with:
+            - output (Any): The workflow function's return value
+
+        Error Handling:
+            - HTTP 400: Invalid JSON, missing required fields
+            - HTTP 422: Input validation errors
+            - HTTP 500: Internal server errors
+            - Preserves status codes from EndureException and HTTPException
+            All errors return JSON with 'error' and optional 'details' fields.
 
         Notes:
-            - The handler expects a JSON request with 'execution_id' and 'input' fields.
-            - Both synchronous and asynchronous workflow functions are supported.
+            - Supports both synchronous and asynchronous workflow functions
+            - Automatically marks execution as running via InternalEndureClient
+            - Converts HTTPException to EndureException for consistent error format
         """  # noqa: E501
 
         async def handler(request: Request):
