@@ -218,9 +218,6 @@ class Workflow:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     output={"error": "Value error", "details": str(ve)},
                 )    
-            # except EndureException:
-            #     # re-raising EndureException to preserve its status code
-            #     raise
             except HTTPException as he:
                 raise EndureException(
                     status_code=he.status_code, output={"error": he.detail}

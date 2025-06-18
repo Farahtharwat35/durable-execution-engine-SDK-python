@@ -1,7 +1,6 @@
 import os
 import requests
 from ..types import Log, Response
-from fastapi import status
 
 
 class InternalEndureClient:

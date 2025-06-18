@@ -32,7 +32,7 @@ class TestInternalClient:
             call_args = mock_patch.call_args
             assert (
                 call_args[0][0]
-                == f"{InternalEndureClient._base_url}/executions/execution/test-execution-id/log/test_action"
+                == f"{InternalEndureClient._base_url}/executions/test-execution-id/log/test_action"
             )
             assert call_args[1]["headers"] == {
                 "Content-Type": "application/json"
@@ -65,17 +65,6 @@ class TestInternalClient:
 
     def test_send_log_invalid_inputs(self):
         """Test error handling for invalid input parameters"""
-        # empty execution_id
-        with pytest.raises(ValueError) as exc_info:
-            InternalEndureClient.send_log(
-                execution_id="",
-                log=Log(status=LogStatus.STARTED),
-                action_name="test_action",
-            )
-        assert "execution_id, log, and action_name must be provided" in str(
-            exc_info.value
-        )
-
         # none log
         with pytest.raises(ValueError) as exc_info:
             InternalEndureClient.send_log(
@@ -83,7 +72,7 @@ class TestInternalClient:
                 log=None,
                 action_name="test_action",
             )
-        assert "execution_id, log, and action_name must be provided" in str(
+        assert "log and action_name must be provided" in str(
             exc_info.value
         )
 
@@ -94,7 +83,7 @@ class TestInternalClient:
                 log=Log(status=LogStatus.STARTED),
                 action_name="",
             )
-        assert "execution_id, log, and action_name must be provided" in str(
+        assert "log and action_name must be provided" in str(
             exc_info.value
         )
 

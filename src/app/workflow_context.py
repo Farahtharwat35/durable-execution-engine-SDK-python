@@ -1,6 +1,6 @@
 import time
 
-from fastapi import HTTPException, status , ValidationException
+from fastapi import HTTPException, status
 import requests
 from app._internal.internal_client import (
     InternalEndureClient,
