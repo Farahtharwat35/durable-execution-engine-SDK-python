@@ -1,6 +1,7 @@
 import time
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status , ValidationException
+from fastapi.exceptions import RequestValidationError
 
 from app._internal.internal_client import (
     InternalEndureClient,
@@ -9,6 +10,7 @@ from app.types import (
     Log,
     LogStatus,
     RetryMechanism,
+    EndureException,
 )
 
 
@@ -137,7 +139,9 @@ class WorkflowContext:
                 self.execution_id, log, action.__name__
             )
             if not engine_response:
-                raise RuntimeError("Failed to mark execution as running.")
+                raise ValueError(
+                    "Base URL is not set in environment variables or missing required parameters (log or action_name)."
+                )
             status_code = engine_response["status_code"]
             match status_code:
                 case status.HTTP_201_CREATED | status.HTTP_200_OK:
@@ -155,18 +159,15 @@ class WorkflowContext:
                 case status.HTTP_208_ALREADY_REPORTED:
                     output = engine_response.get("payload", {}).get("output")
                     return output if output else {}
-
-        except HTTPException as e:
-            raise RuntimeError(
-                f"Action execution failed: {str(e)} , status code: {e.status_code}"
-            )
-
+        except ValueError as e:
+            print(f"ValueError: {e}")
+            raise e
         except Exception as e:
             log = Log(
                 status=LogStatus.FAILED,
                 output={"error": str(e)},
             )
-            engine_response = InternalEndureClient.send_log(
+            InternalEndureClient.send_log(
                 self.execution_id, log, action.__name__
             )
             status_code = engine_response["status_code"]
@@ -177,8 +178,9 @@ class WorkflowContext:
                         "retry_at"
                     )
                     if not retry_at_unix:
-                        raise RuntimeError(
-                            "Missing retry_at in response payload"
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Missing retry_at in response payload"
                         )
                     sleep_seconds = retry_at_unix - time.time()
                     if sleep_seconds > 0:
@@ -199,13 +201,14 @@ class WorkflowContext:
                         status=LogStatus.FAILED,
                         output={"error": str(e)},
                     )
-                    engine_response = InternalEndureClient.send_log(
+                    InternalEndureClient.send_log(
                         self.execution_id,
                         log,
                         action.__name__,
                     )
                     status_code = engine_response["status_code"]
                     if status_code != status.HTTP_200_OK:
-                        raise RuntimeError(
-                            f"Action execution failed: {str(e)}"
+                        raise EndureException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            output={"error": str("Action failed after reaching max retries")},
                         )

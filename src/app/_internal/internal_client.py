@@ -1,6 +1,7 @@
 import os
 import requests
 from ..types import Log, Response
+from fastapi import status
 
 
 class InternalEndureClient:
@@ -29,20 +30,28 @@ class InternalEndureClient:
                 "DURABLE_ENGINE_BASE_URL is not set in environment variables."
             )
 
-        if not execution_id or not log or not action_name:
-            raise ValueError(
-                "execution_id, log, and action_name must be provided."
-            )
+            if not log or not action_name:
+                raise ValueError(
+                    "log and action_name must be provided."
+                )
 
-        url = f"{self._base_url}/executions/execution/{execution_id}/log/{action_name}"
-        headers = {"Content-Type": "application/json"}
-        payload = log.to_dict()
-        response = requests.patch(url, headers=headers, json=payload)
-        response.raise_for_status()
-        response = Response(
-            status_code=response.status_code,
-            payload=response.json(),
-        )
+            url = f"{self._base_url}/executions/{execution_id}/log/{action_name}"
+            headers = {"Content-Type": "application/json"}
+            payload = log.to_dict()
+            response = requests.patch(url, headers=headers, json=payload)
+            response.raise_for_status()
+            response = Response(
+                status_code=response.status_code,
+                payload=response.json(),
+            )
+        except requests.exceptions.HTTPError as e:
+            response = Response(
+                status_code=e.response.status_code,
+                payload=e.response.json(),
+            )
+        except (requests.exceptions.RequestException)  as e:
+            print("Engine is unreachable. Aborting retries: {}".format(e))
+            return
         return response.to_dict()
 
     @classmethod
@@ -60,19 +69,23 @@ class InternalEndureClient:
             ValueError: If DURABLE_ENGINE_BASE_URL is not set or if execution_id is missing.
             requests.exceptions.HTTPError: If the request fails.
         """
-        if not self._base_url:
-            raise ValueError(
-                "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+        try:
+            if not self._base_url:
+                raise ValueError(
+                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+                )
+            url = f"{self._base_url}/executions/{execution_id}/started"
+            headers = {"Content-Type": "application/json"}
+            response = requests.patch(url, headers=headers)
+            response.raise_for_status()
+            response = Response(
+                status_code=response.status_code,
             )
-
-        if not execution_id:
-            raise ValueError("execution_id must be provided.")
-
-        url = f"{self._base_url}/executions/{execution_id}/started"
-        headers = {"Content-Type": "application/json"}
-        response = requests.patch(url, headers=headers)
-        response.raise_for_status()
-        response = Response(
-            status_code=response.status_code,
-        )
+        except requests.exceptions.HTTPError as e:
+            response = Response(
+                status_code=e.response.status_code,
+            )
+        except (requests.exceptions.RequestException) as e:
+            print("Engine is unreachable. Aborting retries: {}".format(e))
+            return
         return response.to_dict()
