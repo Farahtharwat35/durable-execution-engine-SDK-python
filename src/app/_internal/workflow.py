@@ -198,7 +198,6 @@ class Workflow:
                         status_code=status.HTTP_400_BAD_REQUEST,
                         output={"error": "Request body must be a JSON object"},
                     )
-
                 if "execution_id" not in body or "input" not in body:
                     raise EndureException(
                         status_code=status.HTTP_400_BAD_REQUEST,
@@ -206,26 +205,22 @@ class Workflow:
                             "error": "Request must include 'execution_id' and 'input' fields"
                         },
                     )
-
                 ctx = WorkflowContext(execution_id=body["execution_id"])
                 InternalEndureClient.mark_execution_as_running(
                     body["execution_id"]
                 )
-            except (json.JSONDecodeError, ValueError):
-                raise EndureException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    output={"error": "Invalid JSON format"},
-                )
-            except ValueError as e:
-                raise e
-            except Exception as e:
                 output = self.func(ctx, body["input"])
                 if asyncio.iscoroutine(output):
                     output = await output
                 return {"output": output}
-            except EndureException:
-                # re-raising EndureException to preserve its status code
-                raise
+            except ValueError as ve:
+                raise EndureException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    output={"error": "Value error", "details": str(ve)},
+                )    
+            # except EndureException:
+            #     # re-raising EndureException to preserve its status code
+            #     raise
             except HTTPException as he:
                 raise EndureException(
                     status_code=he.status_code, output={"error": he.detail}

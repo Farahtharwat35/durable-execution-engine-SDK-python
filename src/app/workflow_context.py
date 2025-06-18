@@ -1,8 +1,7 @@
 import time
 
 from fastapi import HTTPException, status , ValidationException
-from fastapi.exceptions import RequestValidationError
-
+import requests
 from app._internal.internal_client import (
     InternalEndureClient,
 )
@@ -160,7 +159,8 @@ class WorkflowContext:
                     output = engine_response.get("payload", {}).get("output")
                     return output if output else {}
         except ValueError as e:
-            print(f"ValueError: {e}")
+            raise e
+        except requests.exceptions.RequestException as e:
             raise e
         except Exception as e:
             log = Log(
