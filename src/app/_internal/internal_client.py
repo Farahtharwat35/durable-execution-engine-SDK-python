@@ -25,10 +25,11 @@ class InternalEndureClient:
             ValueError: If DURABLE_ENGINE_BASE_URL is not set or if required parameters are missing.
             requests.exceptions.HTTPError: If the request fails.
         """  # noqa: E501
-        if not self._base_url:
-            raise ValueError(
-                "DURABLE_ENGINE_BASE_URL is not set in environment variables."
-            )
+        try:
+            if not self._base_url:
+                raise ValueError(
+                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+                )
 
             if not log or not action_name:
                 raise ValueError(
