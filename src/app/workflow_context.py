@@ -208,6 +208,4 @@ class WorkflowContext:
                     if status_code != status.HTTP_200_OK:
                         raise RuntimeError(
                             f"Action execution failed: {str(e)}"
-                        )        
-
-                    
+                        )
