@@ -5,6 +5,7 @@ from fastapi import status, HTTPException
 import time
 from pydantic import ValidationError, BaseModel
 import requests
+import asyncio
 
 
 @pytest.mark.asyncio
@@ -325,3 +326,35 @@ async def test_value_error_in_first_send_log(workflow_context):
             )
         assert "First log error" in str(exc_info.value)
         assert mock_send_log.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_action_with_async_action(workflow_context):
+    called = False
+
+    async def async_action(input_data):
+        nonlocal called
+        called = True
+        await asyncio.sleep(0.01)
+        return {"result": input_data}
+
+    mock_started_response = Response(status_code=201, payload={})
+    mock_completed_response = Response(status_code=200, payload={})
+
+    with patch(
+        "app._internal.internal_client.InternalEndureClient.send_log"
+    ) as mock_send_log:
+        mock_send_log.side_effect = [
+            mock_started_response.to_dict(),
+            mock_completed_response.to_dict(),
+        ]
+
+        result = await workflow_context.execute_action(
+            action=async_action,
+            input_data={"foo": "bar"},
+            max_retries=1,
+            retry_mechanism=RetryMechanism.EXPONENTIAL,
+        )
+
+        assert called is True
+        assert result == {"result": {"foo": "bar"}}
