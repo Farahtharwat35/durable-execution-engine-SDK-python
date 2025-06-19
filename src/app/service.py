@@ -117,7 +117,10 @@ class Service:
             retention_period = config.get("retention", 7)
             validate_retention_period(retention_period)
             input_keys = func.__code__.co_varnames[: func.__code__.co_argcount]
-            if ("input" and "ctx" not in input_keys) or len(input_keys) != 2:
+            if (
+                not ("input" in input_keys and "ctx" in input_keys)
+                or len(input_keys) != 2
+            ):
                 raise ValueError(
                     "The workflow function must have an 'input' and 'ctx' argument."
                 )
