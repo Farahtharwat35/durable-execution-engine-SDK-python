@@ -1,5 +1,5 @@
 import time
-
+import asyncio
 from fastapi import status
 import requests
 from app._internal.internal_client import (
@@ -58,7 +58,7 @@ class WorkflowContext:
         """
         self.execution_id = execution_id
 
-    def execute_action(
+    async def execute_action(
         self,
         action: callable,
         input_data,
@@ -148,7 +148,10 @@ class WorkflowContext:
                 while attempt <= max_retries:
                     try:
                         try:
-                            result = action(input_data)
+                            if asyncio.iscoroutinefunction(action):
+                                result = await action(input_data)
+                            else:
+                                result = action(input_data)
                         except (ValueError, ValidationError) as e:
                             InternalEndureClient.send_log(
                                 self.execution_id,
