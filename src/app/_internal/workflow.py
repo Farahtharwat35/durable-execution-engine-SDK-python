@@ -1,5 +1,5 @@
 import asyncio
-import json
+import requests
 from typing import Any, Callable, Union, get_type_hints, get_origin, get_args
 
 from fastapi import Request, status, HTTPException, types
@@ -229,6 +229,12 @@ class Workflow:
                 )
             except EndureException as ee:
                 raise ee
+            # in case Engine retruned 400/500 from MarkExecutionAsRunning or Send_Log
+            except requests.exceptions.RequestException as re:
+                raise EndureException(
+                    status_code=re.status_code,
+                    output={"error": re.detail},
+                ) 
             except Exception as e:
                 raise EndureException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

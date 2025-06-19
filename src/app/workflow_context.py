@@ -11,6 +11,7 @@ from app.types import (
     RetryMechanism,
     EndureException,
 )
+from pydantic import ValidationError
 
 
 class WorkflowContext:
@@ -127,88 +128,70 @@ class WorkflowContext:
             )
             ```
         """
-        try:
-            log = Log(
-                status=LogStatus.STARTED,
-                input=input_data,
-                retry_mechanism=retry_mechanism,
-                max_retries=max_retries,
+        log = Log(
+            status=LogStatus.STARTED,
+            input=input_data,
+            retry_mechanism=retry_mechanism,
+            max_retries=max_retries,
+        )
+        engine_response = InternalEndureClient.send_log(
+            self.execution_id, log, action.__name__
+        )
+        if not engine_response:
+            raise ValueError(
+                "Base URL is not set in environment variables or missing required parameters (log or action_name)."
             )
-            engine_response = InternalEndureClient.send_log(
-                self.execution_id, log, action.__name__
-            )
-            if not engine_response:
-                raise ValueError(
-                    "Base URL is not set in environment variables or missing required parameters (log or action_name)."
-                )
-            status_code = engine_response["status_code"]
-            match status_code:
-                case status.HTTP_201_CREATED | status.HTTP_200_OK:
-                    result = action(input_data)
-                    log = Log(
-                        status=LogStatus.COMPLETED,
-                        output=result,
-                    )
-                    InternalEndureClient.send_log(
-                        self.execution_id,
-                        log,
-                        action.__name__,
-                    )
-                    return result
-                case status.HTTP_208_ALREADY_REPORTED:
-                    output = engine_response.get("payload", {}).get("output")
-                    return output if output else {}
-        except ValueError as e:
-            raise e
-        except requests.exceptions.RequestException as e:
-            raise e
-        except Exception as e:
-            log = Log(
-                status=LogStatus.FAILED,
-                output={"error": str(e)},
-            )
-            InternalEndureClient.send_log(
-                self.execution_id, log, action.__name__
-            )
-            status_code = engine_response["status_code"]
-            # Retry logic based on the retry mechanism
-            while status_code == status.HTTP_200_OK:
-                try:
-                    retry_at_unix = engine_response.get("payload", {}).get(
-                        "retry_at"
-                    )
-                    if not retry_at_unix:
-                        raise HTTPException(
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Missing retry_at in response payload"
+        status_code = engine_response["status_code"]
+        match status_code:
+            case status.HTTP_201_CREATED | status.HTTP_200_OK:
+                attempt = 0
+                while attempt <= max_retries:
+                    try:
+                        try:
+                            result = action(input_data)
+                        except (ValueError, ValidationError) as e:
+                            InternalEndureClient.send_log(
+                                self.execution_id,
+                                Log(
+                                    status=LogStatus.FAILED,
+                                    output={"error": str(e)},
+                                ),
+                                action.__name__,
+                            )
+                            print(f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}")
+                            raise
+                        log = Log(
+                            status=LogStatus.COMPLETED,
+                            output=result,
                         )
-                    sleep_seconds = retry_at_unix - time.time()
-                    if sleep_seconds > 0:
-                        time.sleep(sleep_seconds)
-                    result = action(input_data)
-                    log = Log(
-                        status=LogStatus.COMPLETED,
-                        output=result,
-                    )
-                    InternalEndureClient.send_log(
-                        self.execution_id,
-                        log,
-                        action.__name__,
-                    )
-                    return result
-                except Exception as e:
-                    log = Log(
-                        status=LogStatus.FAILED,
-                        output={"error": str(e)},
-                    )
-                    InternalEndureClient.send_log(
-                        self.execution_id,
-                        log,
-                        action.__name__,
-                    )
-                    status_code = engine_response["status_code"]
-                    if status_code != status.HTTP_200_OK:
-                        raise EndureException(
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            output={"error": str("Action failed after reaching max retries")},
+                        InternalEndureClient.send_log(
+                            self.execution_id,
+                            log,
+                            action.__name__,
                         )
+                        return result
+                    except (ValueError, ValidationError, requests.exceptions.RequestException) as e:
+                        print(f"DEBUG: Caught exception of type {type(e)}: {e}")
+                        raise
+                    except Exception as e:
+                        if attempt == max_retries:
+                            raise EndureException(
+                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                output={"error": str("Action failed after reaching max retries")},
+                            )
+                        log = Log(
+                            status=LogStatus.FAILED,
+                            output={"error": str(e)},
+                        )
+                        engine_response = InternalEndureClient.send_log(
+                            self.execution_id, log, action.__name__
+                        )
+                        attempt += 1
+                        retry_at_unix = engine_response.get("payload", {}).get("retry_at")
+                        if retry_at_unix:
+                            sleep_seconds = retry_at_unix - time.time()
+                            if sleep_seconds > 0:
+                                time.sleep(sleep_seconds)
+            case status.HTTP_208_ALREADY_REPORTED:
+                output = engine_response.get("payload", {}).get("output")
+                return output if output else {}
