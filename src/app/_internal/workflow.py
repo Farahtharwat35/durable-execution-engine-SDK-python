@@ -214,19 +214,21 @@ class Workflow:
                     output = await output
                 return {"output": output}
             except ValueError as ve:
+                if isinstance(ve, ValidationError):
+                    raise EndureException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        output={"error": "Validation error", "details": str(ve)},
+                    )
                 raise EndureException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     output={"error": "Value error", "details": str(ve)},
-                )    
+                )
             except HTTPException as he:
                 raise EndureException(
                     status_code=he.status_code, output={"error": he.detail}
                 )
-            except ValidationError as ve:
-                raise EndureException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    output={"error": "Validation error", "details": str(ve)},
-                )
+            except EndureException as ee:
+                raise ee
             except Exception as e:
                 raise EndureException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

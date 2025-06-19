@@ -233,8 +233,9 @@ class TestWorkflow:
             with pytest.raises(EndureException) as exc_info:
                 await handler(mock_request)
 
-            assert exc_info.value.status_code == 500
-            assert exc_info.value.output["error"] == "Internal server error"
+            assert exc_info.value.status_code == 400
+            assert exc_info.value.output["error"] == "Value error"
+            assert "Workflow execution failed" in exc_info.value.output["details"]
 
     @pytest.mark.asyncio
     async def test_missing_required_fields(self, mock_request):
@@ -281,14 +282,11 @@ class TestWorkflow:
         """Test handling of malformed JSON in request."""
         workflow = Workflow(self.sync_workflow)
         handler = workflow.get_handler_route()
-
         mock_request.json.side_effect = ValueError("Invalid JSON format")
-
         with pytest.raises(EndureException) as exc_info:
             await handler(mock_request)
-
         assert exc_info.value.status_code == 400
-        assert exc_info.value.output["error"] == "Invalid JSON format"
+        assert exc_info.value.output["error"] == "Value error"
 
     @pytest.mark.asyncio
     async def test_workflow_http_exception(self, mock_request):
