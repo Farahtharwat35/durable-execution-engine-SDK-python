@@ -228,8 +228,10 @@ async def test_retry_respects_timing(workflow_context):
 @pytest.mark.asyncio
 async def test_action_with_value_error(workflow_context):
     """Test that ValueError from the action is re-raised immediately (not retried) and logs FAILED."""
+
     def action_raises_value_error(input_data):
         raise ValueError("Immediate failure")
+
     mock_responses = [
         Response(status_code=status.HTTP_201_CREATED, payload={}),
         Response(status_code=status.HTTP_200_OK, payload={}),
@@ -255,10 +257,13 @@ async def test_action_with_value_error(workflow_context):
 @pytest.mark.asyncio
 async def test_action_with_validation_error(workflow_context):
     """Test that ValidationError from the action is re-raised immediately (not retried) and logs FAILED."""
+
     class DummyModel(BaseModel):
         x: int
+
     def action_raises_validation_error(input_data):
         raise ValidationError([], model=DummyModel)
+
     mock_started_response = Response(
         status_code=status.HTTP_201_CREATED, payload={}
     )
@@ -286,11 +291,15 @@ async def test_action_with_validation_error(workflow_context):
         assert failed_log.status == LogStatus.FAILED
         assert "validation error" in failed_log.output["error"].lower()
 
+
 @pytest.mark.asyncio
 async def test_action_with_requests_exception(workflow_context):
-    """Test that requests.exceptions.RequestException is re-raised immediately (not retried) and only logs STARTED."""
+    """Test that requests.exceptions.RequestException
+    is re-raised immediately (not retried) and only logs STARTED."""
+
     def action_raises_requests_exception(input_data):
         raise requests.exceptions.RequestException("Request failed")
+
     mock_response = Response(status_code=status.HTTP_201_CREATED, payload={})
     with patch(
         "app._internal.internal_client.InternalEndureClient.send_log"
@@ -311,8 +320,10 @@ async def test_action_with_requests_exception(workflow_context):
 @pytest.mark.asyncio
 async def test_value_error_in_first_send_log(workflow_context):
     """Test that ValueError in the first send_log is raised and not logged as FAILED."""
+
     def dummy_action(input_data):
         return "should not be called"
+
     with patch(
         "app._internal.internal_client.InternalEndureClient.send_log"
     ) as mock_send_log:
