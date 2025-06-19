@@ -4,6 +4,6 @@ format:
 lint:
 	poetry run flake8 .
 test:
-	poetry run python -m pytest test/ --verbose
+	poetry run python -m pytest tests/ -v --cov=app
 
 

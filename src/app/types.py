@@ -1,9 +1,7 @@
-
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 from enum import Enum
-
+from typing import Optional
 
 
 class LogStatus(Enum):
@@ -11,37 +9,59 @@ class LogStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class RetryMechanism(Enum):
     EXPONENTIAL = "exponential"
-    LINEAR    = "linear"
-    CONSTANT   = "constant"
+    LINEAR = "linear"
+    CONSTANT = "constant"
+
+
+def log_to_dict(log: "Log") -> dict:
+    """Convert a Log instance to a dictionary with proper enum handling"""
+    return {
+        "status": log.status.value if log.status else None,
+        "input": log.input,
+        "output": log.output,
+        "max_retries": log.max_retries,
+        "retry_mechanism": (
+            log.retry_mechanism.value if log.retry_mechanism else None
+        ),
+        "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+    }
+
 
 @dataclass
-class Log():
+class Log:
     status: LogStatus
-    input:Optional[dict] = None
+    input: Optional[dict] = None
     output: Optional[dict] = None
     max_retries: Optional[int] = None
-    retry_method: Optional[RetryMechanism] = None
+    retry_mechanism: Optional[RetryMechanism] = None
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
+    def to_dict(self):
+        """Convert Log to a dictionary for JSON serialization"""
+        return log_to_dict(self)
+
+
 @dataclass
-class Response():
-    status: int
+class Response:
+    status_code: int
     payload: Optional[dict] = None
 
     def to_dict(self):
         return {
-            "status": self.status,
-            "payload": self.payload if self.payload is not None else {}
+            "status_code": self.status_code,
+            "payload": (self.payload if self.payload is not None else {}),
         }
 
+
 class EndureException(Exception):
-    def __init__(self,status_code: int , output:any):
+    def __init__(self, status_code: int, output: any):
         self.output = output
         self.status_code = status_code
 
-@dataclass
-class ErrorResponse():
-    output: any 
 
+@dataclass
+class ErrorResponse:
+    output: any
