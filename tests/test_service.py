@@ -140,3 +140,23 @@ class TestService:
             {"test": "data"}, WorkflowContext("test-execution-id")
         )
         assert result == {"result": {"test": "data"}}
+
+    def test_workflow_decorator_invalid_signature_missing_input(self, service):
+        """Test that workflow without 'input' parameter raises ValueError"""
+        def wf_missing_input(foo: dict, ctx: WorkflowContext):
+            return {"result": foo}
+        with pytest.raises(ValueError) as exc_info:
+            service.workflow()(wf_missing_input)
+        assert (
+            "The workflow function must have an 'input' and 'ctx' argument" in str(exc_info.value)
+        )
+
+    def test_workflow_decorator_invalid_signature_too_many_args(self, service):
+        """Test that workflow with too many arguments raises ValueError"""
+        def wf_too_many_args(input: dict, ctx: WorkflowContext, extra: int):
+            return {"result": input}
+        with pytest.raises(ValueError) as exc_info:
+            service.workflow()(wf_too_many_args)
+        assert (
+            "The workflow function must have an 'input' and 'ctx' argument" in str(exc_info.value)
+        )
