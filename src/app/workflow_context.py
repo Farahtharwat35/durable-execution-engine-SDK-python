@@ -1,6 +1,6 @@
 import time
 
-from fastapi import HTTPException, status
+from fastapi import status
 import requests
 from app._internal.internal_client import (
     InternalEndureClient,
@@ -158,7 +158,9 @@ class WorkflowContext:
                                 ),
                                 action.__name__,
                             )
-                            print(f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}")
+                            print(
+                                f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
+                            )
                             raise
                         log = Log(
                             status=LogStatus.COMPLETED,
@@ -170,14 +172,24 @@ class WorkflowContext:
                             action.__name__,
                         )
                         return result
-                    except (ValueError, ValidationError, requests.exceptions.RequestException) as e:
-                        print(f"DEBUG: Caught exception of type {type(e)}: {e}")
+                    except (
+                        ValueError,
+                        ValidationError,
+                        requests.exceptions.RequestException,
+                    ) as e:
+                        print(
+                            f"DEBUG: Caught exception of type {type(e)}: {e}"
+                        )
                         raise
                     except Exception as e:
                         if attempt == max_retries:
                             raise EndureException(
                                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                output={"error": str("Action failed after reaching max retries")},
+                                output={
+                                    "error": str(
+                                        "Action failed after reaching max retries"
+                                    )
+                                },
                             )
                         log = Log(
                             status=LogStatus.FAILED,
@@ -187,7 +199,9 @@ class WorkflowContext:
                             self.execution_id, log, action.__name__
                         )
                         attempt += 1
-                        retry_at_unix = engine_response.get("payload", {}).get("retry_at")
+                        retry_at_unix = engine_response.get("payload", {}).get(
+                            "retry_at"
+                        )
                         if retry_at_unix:
                             sleep_seconds = retry_at_unix - time.time()
                             if sleep_seconds > 0:

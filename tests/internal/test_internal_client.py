@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import patch
 from fastapi import status
 
+
 from app._internal.internal_client import InternalEndureClient
 from app.types import Log, LogStatus, Response
 
@@ -72,9 +73,7 @@ class TestInternalClient:
                 log=None,
                 action_name="test_action",
             )
-        assert "log and action_name must be provided" in str(
-            exc_info.value
-        )
+        assert "log and action_name must be provided" in str(exc_info.value)
 
         # empty action_name
         with pytest.raises(ValueError) as exc_info:
@@ -83,9 +82,7 @@ class TestInternalClient:
                 log=Log(status=LogStatus.STARTED),
                 action_name="",
             )
-        assert "log and action_name must be provided" in str(
-            exc_info.value
-        )
+        assert "log and action_name must be provided" in str(exc_info.value)
 
     def test_send_log_http_error(self, sample_log):
         """Test handling of HTTP errors from the engine"""
@@ -121,4 +118,25 @@ class TestInternalClient:
             }
 
             assert result["status_code"] == status.HTTP_200_OK
+            assert result["payload"] == {}
+
+    def test_send_log_empty_body(self, sample_log):
+        """Test handling of 200 OK with empty body (non-JSON)."""
+
+        class MockResponse:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                raise ValueError("No JSON")
+
+        with patch("requests.patch", return_value=MockResponse()):
+            result = InternalEndureClient.send_log(
+                execution_id="test-execution-id",
+                log=sample_log,
+                action_name="test_action",
+            )
+            assert result["status_code"] == 200
             assert result["payload"] == {}

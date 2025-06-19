@@ -26,30 +26,40 @@ class InternalEndureClient:
         """  # noqa: E501
         try:
             if not self._base_url:
-                print("DURABLE_ENGINE_BASE_URL is not set in environment variables.")
+                print(
+                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+                )
                 raise ValueError(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
                 )
 
             if not log or not action_name:
                 print("log and action_name must be provided.")
-                raise ValueError(
-                    "log and action_name must be provided."
-                )
+                raise ValueError("log and action_name must be provided.")
 
-            url = f"{self._base_url}/executions/{execution_id}/log/{action_name}"
+            url = (
+                f"{self._base_url}/executions/{execution_id}/log/{action_name}"
+            )
             headers = {"Content-Type": "application/json"}
             payload = log.to_dict()
             response = requests.patch(url, headers=headers, json=payload)
             response.raise_for_status()
+            try:
+                response_payload = response.json()
+            except ValueError:
+                response_payload = {}
             response = Response(
                 status_code=response.status_code,
-                payload=response.json(),
+                payload=response_payload,
             )
         except requests.exceptions.HTTPError as e:
+            try:
+                error_payload = e.response.json()
+            except Exception:
+                error_payload = {}
             response = Response(
                 status_code=e.response.status_code,
-                payload=e.response.json(),
+                payload=error_payload,
             )
         except requests.exceptions.RequestException as e:
             print("Engine is unreachable. Aborting retries: {}".format(e))

@@ -217,7 +217,10 @@ class Workflow:
                 if isinstance(ve, ValidationError):
                     raise EndureException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        output={"error": "Validation error", "details": str(ve)},
+                        output={
+                            "error": "Validation error",
+                            "details": str(ve),
+                        },
                     )
                 raise EndureException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -234,7 +237,7 @@ class Workflow:
                 raise EndureException(
                     status_code=re.status_code,
                     output={"error": re.detail},
-                ) 
+                )
             except Exception as e:
                 raise EndureException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

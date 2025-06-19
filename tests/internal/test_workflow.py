@@ -235,7 +235,9 @@ class TestWorkflow:
 
             assert exc_info.value.status_code == 400
             assert exc_info.value.output["error"] == "Value error"
-            assert "Workflow execution failed" in exc_info.value.output["details"]
+            assert (
+                "Workflow execution failed" in exc_info.value.output["details"]
+            )
 
     @pytest.mark.asyncio
     async def test_missing_required_fields(self, mock_request):
