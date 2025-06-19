@@ -1,4 +1,5 @@
 import time
+import logging
 import asyncio
 from fastapi import status
 import requests
@@ -161,7 +162,7 @@ class WorkflowContext:
                                 ),
                                 action.__name__,
                             )
-                            print(
+                            logging.info(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
                             )
                             raise
@@ -180,7 +181,7 @@ class WorkflowContext:
                         ValidationError,
                         requests.exceptions.RequestException,
                     ) as e:
-                        print(
+                        logging.debug(
                             f"DEBUG: Caught exception of type {type(e)}: {e}"
                         )
                         raise

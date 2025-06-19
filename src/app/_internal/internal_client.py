@@ -1,4 +1,5 @@
 import os
+import logging
 import requests
 from ..types import Log, Response
 
@@ -26,15 +27,11 @@ class InternalEndureClient:
         """  # noqa: E501
         try:
             if not self._base_url:
-                print(
-                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
-                )
                 raise ValueError(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
                 )
 
             if not log or not action_name:
-                print("log and action_name must be provided.")
                 raise ValueError("log and action_name must be provided.")
 
             url = (
@@ -62,7 +59,9 @@ class InternalEndureClient:
                 payload=error_payload,
             )
         except requests.exceptions.RequestException as e:
-            print("Engine is unreachable. Aborting retries: {}".format(e))
+            logging.error(
+                "Engine is unreachable. Aborting retries: {}".format(e)
+            )
             raise e
         return response.to_dict()
 
@@ -98,6 +97,8 @@ class InternalEndureClient:
                 status_code=e.response.status_code,
             )
         except requests.exceptions.RequestException as e:
-            print("Engine is unreachable. Aborting retries: {}".format(e))
+            logging.error(
+                "Engine is unreachable. Aborting retries: {}".format(e)
+            )
             raise e
         return response.to_dict()
