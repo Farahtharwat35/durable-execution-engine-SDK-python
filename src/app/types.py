@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -23,10 +23,10 @@ def log_to_dict(log: "Log") -> dict:
         "input": log.input,
         "output": log.output,
         "max_retries": log.max_retries,
-        "retry_mechanism": (
+        "retry_method": (
             log.retry_mechanism.value if log.retry_mechanism else None
         ),
-        "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+        "timestamp": log.timestamp.replace(tzinfo=timezone.utc).isoformat() if log.timestamp else None,
     }
 
 
@@ -37,7 +37,7 @@ class Log:
     output: Optional[dict] = None
     max_retries: Optional[int] = None
     retry_mechanism: Optional[RetryMechanism] = None
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert Log to a dictionary for JSON serialization"""
