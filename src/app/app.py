@@ -81,10 +81,9 @@ class DurableApp:
             dict: A dictionary containing all registered services and their workflows.
         """
         services = self.serviceRegistry.get_services()
-        return {
-            "services": [
+        return [
                 {
-                    "name": service_name,
+                    "service_name": service_name,
                     "workflows": [
                         {
                             "name": workflow.name,
@@ -97,7 +96,6 @@ class DurableApp:
                 }
                 for service_name, workflows in services.items()
             ]
-        }
 
     async def raise_exception(
         self, request: Request, exc: EndureException, _=None

@@ -65,6 +65,7 @@ class WorkflowContext:
         input_data,
         max_retries: int,
         retry_mechanism: RetryMechanism,
+        action_name: str = None,
     ) -> any:
         """
         Execute an action with durability guarantees and automatic retry capabilities.
@@ -93,6 +94,8 @@ class WorkflowContext:
                                             - LINEAR_BACKOFF
                                             - EXPONENTIAL_BACKOFF
                                             etc.
+            action_name (str, optional): Custom name for the action in logs. If not provided,
+                                       uses action.__name__.
 
         Returns:
             any: Either:
@@ -135,8 +138,9 @@ class WorkflowContext:
             retry_mechanism=retry_mechanism,
             max_retries=max_retries,
         )
+        name = action_name if action_name is not None else action.__name__
         engine_response = InternalEndureClient.send_log(
-            self.execution_id, log, action.__name__
+            self.execution_id, log, name
         )
         if not engine_response:
             raise ValueError(
@@ -160,7 +164,7 @@ class WorkflowContext:
                                     status=LogStatus.FAILED,
                                     output={"error": str(e)},
                                 ),
-                                action.__name__,
+                                name,
                             )
                             logging.info(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
@@ -173,7 +177,7 @@ class WorkflowContext:
                         InternalEndureClient.send_log(
                             self.execution_id,
                             log,
-                            action.__name__,
+                            name,
                         )
                         return result
                     except (
@@ -200,7 +204,7 @@ class WorkflowContext:
                             output={"error": str(e)},
                         )
                         engine_response = InternalEndureClient.send_log(
-                            self.execution_id, log, action.__name__
+                            self.execution_id, log, name
                         )
                         attempt += 1
                         retry_at_unix = engine_response.get("payload", {}).get(
