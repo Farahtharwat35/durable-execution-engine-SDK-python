@@ -19,7 +19,7 @@ def main():
     payment_service = Service("payments")
 
     @order_service.workflow()
-    async def process_order(input: OrderInput, ctx: WorkflowContext) -> dict:
+    async def process_order(ctx: WorkflowContext, input: OrderInput) -> dict:
             await asyncio.sleep(0.5)
 
             payment_result = await ctx.execute_action(
@@ -64,14 +64,14 @@ def main():
             return {
                 "order_id": input.order_id,
                 "status": "completed",
-                "payment": payment_result.dict(),
-                "reservations": [r.dict() for r in reservations],
-                "notification": notification_result.dict()
+                "payment": payment_result,
+                "reservations": reservations,
+                "notification": notification_result
             }
 
 
     @order_service.workflow()
-    def get_order_status(input: OrderStatusInput, ctx: WorkflowContext) -> OrderStatusResult:
+    def get_order_status(ctx: WorkflowContext, input: OrderStatusInput) -> OrderStatusResult:
         result = ctx.execute_action(
             action=check_order_status,
             input_data=input.order_id,
@@ -86,7 +86,7 @@ def main():
         )
 
     @user_service.workflow()
-    async def register_user(input: UserInput, ctx: WorkflowContext) -> dict:
+    async def register_user(ctx: WorkflowContext, input: UserInput) -> dict:
         await asyncio.sleep(0.5)
         
         user_result = await ctx.execute_action(
@@ -109,12 +109,12 @@ def main():
         
         return {
             "success": True,
-            "user": user_result.dict(),
-            "notification": notification_result.dict()
+            "user": user_result,
+            "notification": notification_result
         }
 
     @payment_service.workflow()
-    async def process_refund(input: RefundInput, ctx: WorkflowContext) -> dict:
+    async def process_refund(ctx: WorkflowContext, input: RefundInput) -> dict:
         refund_result = await ctx.execute_action(
             action=process_refund,
             input_data=input,
@@ -124,7 +124,7 @@ def main():
         
         return {
             "order_id": input.order_id,
-            "refund": refund_result.dict(),
+            "refund": refund_result,
             "status": "completed"
         }
 

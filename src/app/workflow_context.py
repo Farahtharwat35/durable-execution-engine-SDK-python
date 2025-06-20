@@ -6,6 +6,7 @@ import requests
 from app._internal.internal_client import (
     InternalEndureClient,
 )
+from app._internal.utils import serialize_data
 from app.types import (
     Log,
     LogStatus,
@@ -134,7 +135,7 @@ class WorkflowContext:
         """
         log = Log(
             status=LogStatus.STARTED,
-            input=input_data,
+            input=serialize_data(input_data),
             retry_mechanism=retry_mechanism,
             max_retries=max_retries,
         )
@@ -162,7 +163,7 @@ class WorkflowContext:
                                 self.execution_id,
                                 Log(
                                     status=LogStatus.FAILED,
-                                    output={"error": str(e)},
+                                    output=serialize_data({"error": str(e)}),
                                 ),
                                 name,
                             )
@@ -172,7 +173,7 @@ class WorkflowContext:
                             raise
                         log = Log(
                             status=LogStatus.COMPLETED,
-                            output=result,
+                            output=serialize_data(result),
                         )
                         InternalEndureClient.send_log(
                             self.execution_id,
@@ -201,7 +202,7 @@ class WorkflowContext:
                             )
                         log = Log(
                             status=LogStatus.FAILED,
-                            output={"error": str(e)},
+                            output=serialize_data({"error": str(e)}),
                         )
                         engine_response = InternalEndureClient.send_log(
                             self.execution_id, log, name

@@ -9,6 +9,7 @@ from pydantic import ValidationError, BaseModel
 from app.workflow_context import WorkflowContext
 
 from .internal_client import InternalEndureClient
+from .utils import serialize_data
 from ..types import EndureException
 
 
@@ -58,6 +59,7 @@ class Workflow:
         self.name = func.__name__
         self.retention_period = retention_period
         self.input, self.output, self.input_type = self._get_io(func)
+
 
     def _convert_input(self, raw_input: Any) -> Any:
         """
@@ -248,12 +250,10 @@ class Workflow:
                 if asyncio.iscoroutine(output):
                     output = await output
                 
-                if isinstance(output, BaseModel):
-                    output = output.model_dump()
-                elif is_dataclass(output):
-                    output = asdict(output)
+                # Recursively serialize all Pydantic models and dataclasses
+                serialized_output = serialize_data(output)
                 
-                return {"output": output}
+                return {"output": serialized_output}
             except ValueError as ve:
                 if isinstance(ve, ValidationError):
                     raise EndureException(
