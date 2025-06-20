@@ -5,9 +5,9 @@ from .models import *
 
 
 def validate_payment(input_data: PaymentInput) -> PaymentResult:
-    time.sleep(2.0)
+    time.sleep(8)
     
-    if random.random() < 0.2:
+    if random.random() < 0.5:
         raise Exception("Payment validation failed")
     
     return PaymentResult(
@@ -18,9 +18,9 @@ def validate_payment(input_data: PaymentInput) -> PaymentResult:
 
 
 def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
-    time.sleep(1.5)
+    time.sleep(10)
     
-    if random.random() < 0.15:
+    if random.random() < 0.60:
         raise Exception(f"Insufficient inventory for {input_data.item_id}")
     
     return InventoryResult(
@@ -32,9 +32,9 @@ def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
 
 
 async def send_notification(input_data: NotificationInput) -> NotificationResult:
-    await asyncio.sleep(1.0)
+    await asyncio.sleep(6)
     
-    if random.random() < 0.1:
+    if random.random() < 0.75:
         raise Exception(f"Failed to send {input_data.type}")
     
     return NotificationResult(
@@ -45,9 +45,9 @@ async def send_notification(input_data: NotificationInput) -> NotificationResult
 
 
 def create_user(input_data: UserInput) -> UserResult:
-    time.sleep(1.5)
+    time.sleep(7)
     
-    if random.random() < 0.1:
+    if random.random() < 0.7:
         raise Exception("User creation failed")
     
     return UserResult(
@@ -58,9 +58,9 @@ def create_user(input_data: UserInput) -> UserResult:
 
 
 def process_refund(input_data: RefundInput) -> RefundResult:
-    time.sleep(3.0)
+    time.sleep(9)
     
-    if random.random() < 0.05:
+    if random.random() < 0.85:
         raise Exception("Refund processing failed")
     
     return RefundResult(
@@ -71,7 +71,7 @@ def process_refund(input_data: RefundInput) -> RefundResult:
 
 
 def check_order_status(order_id: str) -> dict:
-    time.sleep(0.5)
+    time.sleep(5)
     
     return {
         "order_id": order_id,
