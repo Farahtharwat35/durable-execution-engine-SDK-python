@@ -1,16 +1,16 @@
 import asyncio
-import requests
-from typing import Any, Callable, Union, get_type_hints, get_origin, get_args
-from dataclasses import is_dataclass, asdict
+from dataclasses import is_dataclass
+from typing import Any, Callable, Union, get_args, get_origin, get_type_hints
 
-from fastapi import Request, status, HTTPException, types
-from pydantic import ValidationError, BaseModel
+import requests
+from fastapi import HTTPException, Request, status, types
+from pydantic import BaseModel, ValidationError
 
 from app.workflow_context import WorkflowContext
 
+from ..types import EndureException
 from .internal_client import InternalEndureClient
 from .utils import serialize_data
-from ..types import EndureException
 
 
 class Workflow:
@@ -60,31 +60,35 @@ class Workflow:
         self.retention_period = retention_period
         self.input, self.output, self.input_type = self._get_io(func)
 
-
     def _convert_input(self, raw_input: Any) -> Any:
         """
         Convert raw input (typically a dict from JSON) to the expected input type.
-        
+
         Args:
             raw_input: The raw input value from the request
-            
+
         Returns:
             The converted input value
         """
         # If no type hint or Any, pass through as-is
         if self.input_type is Any or self.input_type is None:
             return raw_input
-            
+
         # If input is already the correct type, pass through
         if not isinstance(raw_input, dict):
             return raw_input
-            
+
         # Check if expected type is a Pydantic model or dataclass
         try:
-            if isinstance(self.input_type, type) and (issubclass(self.input_type, BaseModel) or is_dataclass(self.input_type)):
+            if isinstance(self.input_type, type) and (
+                issubclass(self.input_type, BaseModel)
+                or is_dataclass(self.input_type)
+            ):
                 return self.input_type(**raw_input)
         except (TypeError, ValidationError, ValueError) as e:
-            raise ValueError(f"Failed to convert input to {self.input_type.__name__}: {e}")
+            raise ValueError(
+                f"Failed to convert input to {self.input_type.__name__}: {e}"
+            )
         # For all other cases, pass through as-is
         return raw_input
 
@@ -174,7 +178,7 @@ class Workflow:
         Returns:
             tuple: A tuple containing (input_type_description, output_type_description, input_type), where:
                   - input_type_description: String representation of input type for discovery
-                  - output_type_description: String representation of output type for discovery  
+                  - output_type_description: String representation of output type for discovery
                   - input_type: The actual input type for automatic conversion
                   If type hints aren't provided, "Any" is used as a fallback.
 
@@ -188,7 +192,7 @@ class Workflow:
         return (
             self._get_type_description(input_type),
             self._get_type_description(output_type),
-            input_type
+            input_type,
         )
 
     def get_handler_route(self):
@@ -242,17 +246,16 @@ class Workflow:
                 InternalEndureClient.mark_execution_as_running(
                     body["execution_id"]
                 )
-                
-              
+
                 converted_input = self._convert_input(body["input"])
-                
+
                 output = self.func(ctx, converted_input)
                 if asyncio.iscoroutine(output):
                     output = await output
-                
+
                 # Recursively serialize all Pydantic models and dataclasses
                 serialized_output = serialize_data(output)
-                
+
                 return {"output": serialized_output}
             except ValueError as ve:
                 if isinstance(ve, ValidationError):

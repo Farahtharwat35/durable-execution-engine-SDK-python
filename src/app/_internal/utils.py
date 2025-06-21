@@ -1,5 +1,6 @@
+from dataclasses import asdict, is_dataclass
 from typing import Any
-from dataclasses import is_dataclass, asdict
+
 from pydantic import BaseModel
 
 
@@ -24,28 +25,28 @@ def validate_retention_period(retention: int) -> None:
 def serialize_data(data: Any) -> Any:
     """
     Recursively serialize Pydantic models and dataclasses to JSON-compatible dictionaries.
-    
+
     Args:
         data: The data to serialize (can be any type)
-        
+
     Returns:
         The serialized data with all Pydantic models/dataclasses converted to dicts
-        
+
     Examples:
         >>> serialize_data(UserModel(name="John", age=30))
         {"name": "John", "age": 30}
-        
+
         >>> serialize_data({"user": UserModel(name="John"), "count": 5})
         {"user": {"name": "John"}, "count": 5}
-        
+
         >>> serialize_data([UserModel(name="John"), UserModel(name="Jane")])
         [{"name": "John"}, {"name": "Jane"}]
     """
     if isinstance(data, BaseModel):
         # Handle both Pydantic v1 (.dict()) and v2 (.model_dump())
-        if hasattr(data, 'model_dump'):
+        if hasattr(data, "model_dump"):
             return data.model_dump()
-        elif hasattr(data, 'dict'):
+        elif hasattr(data, "dict"):
             return data.dict()
         else:
             # Fallback: try to convert to dict manually

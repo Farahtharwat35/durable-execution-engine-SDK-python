@@ -1,8 +1,8 @@
 import os
-import pytest
 from unittest.mock import patch
-from fastapi import status
 
+import pytest
+from fastapi import status
 
 from app._internal.internal_client import InternalEndureClient
 from app.types import Log, LogStatus, Response

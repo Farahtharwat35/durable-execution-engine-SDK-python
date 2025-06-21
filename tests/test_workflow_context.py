@@ -1,11 +1,13 @@
-from app.types import LogStatus, RetryMechanism, Response
-import pytest
-from unittest.mock import patch
-from fastapi import status, HTTPException
-import time
-from pydantic import ValidationError, BaseModel
-import requests
 import asyncio
+import time
+from unittest.mock import patch
+
+import pytest
+import requests
+from fastapi import HTTPException, status
+from pydantic import BaseModel, ValidationError
+
+from app.types import LogStatus, Response, RetryMechanism
 
 
 @pytest.mark.asyncio

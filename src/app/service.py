@@ -1,8 +1,4 @@
-from app._internal import (
-    ServiceRegistry,
-    Workflow,
-    validate_retention_period,
-)
+from app._internal import ServiceRegistry, Workflow, validate_retention_period
 from app.workflow_context import WorkflowContext
 
 

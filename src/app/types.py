@@ -26,7 +26,11 @@ def log_to_dict(log: "Log") -> dict:
         "retry_method": (
             log.retry_mechanism.value if log.retry_mechanism else None
         ),
-        "timestamp": log.timestamp.replace(tzinfo=timezone.utc).isoformat() if log.timestamp else None,
+        "timestamp": (
+            log.timestamp.replace(tzinfo=timezone.utc).isoformat()
+            if log.timestamp
+            else None
+        ),
     }
 
 
@@ -37,7 +41,9 @@ class Log:
     output: Optional[dict] = None
     max_retries: Optional[int] = None
     retry_mechanism: Optional[RetryMechanism] = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     def to_dict(self):
         """Convert Log to a dictionary for JSON serialization"""

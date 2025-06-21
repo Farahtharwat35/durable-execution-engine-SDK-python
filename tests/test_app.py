@@ -1,9 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch
 
-from app import DurableApp, Service, WorkflowContext, EndureException
+from app import DurableApp, EndureException, Service, WorkflowContext
 from app._internal import ServiceRegistry
 
 

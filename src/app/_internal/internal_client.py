@@ -1,6 +1,8 @@
-import os
 import logging
+import os
+
 import requests
+
 from ..types import Log, Response
 
 
