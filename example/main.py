@@ -21,7 +21,7 @@ def main():
         await asyncio.sleep(0.5)
 
         payment_result = await ctx.execute_action(
-            action=validate_payment,
+            action=validate_payment_action,
             input_data=PaymentInput(
                 amount=input.total_amount, payment_method="credit_card"
             ),
@@ -34,7 +34,7 @@ def main():
         reservations = []
         for idx, item in enumerate(input.items):
             reservation = await ctx.execute_action(
-                action=reserve_inventory,
+                action=reserve_inventory_action,
                 input_data=InventoryInput(
                     item_id=item.id, quantity=item.quantity
                 ),
@@ -47,7 +47,7 @@ def main():
         await asyncio.sleep(0.2)
 
         notification_result = await ctx.execute_action(
-            action=send_notification,
+            action=send_notification_action,
             input_data=NotificationInput(
                 recipient=input.customer_email,
                 message=f"Order {input.order_id} confirmed",
@@ -70,7 +70,7 @@ def main():
         ctx: WorkflowContext, input: OrderStatusInput
     ) -> OrderStatusResult:
         result = ctx.execute_action(
-            action=check_order_status,
+            action=check_order_status_action,
             input_data=input.order_id,
             max_retries=1,
             retry_mechanism=RetryMechanism.CONSTANT,
@@ -87,14 +87,14 @@ def main():
         await asyncio.sleep(0.5)
 
         user_result = await ctx.execute_action(
-            action=create_user,
+            action=create_user_action,
             input_data=input,
             max_retries=2,
             retry_mechanism=RetryMechanism.EXPONENTIAL,
         )
 
         notification_result = await ctx.execute_action(
-            action=send_notification,
+            action=send_notification_action,
             input_data=NotificationInput(
                 recipient=input.email,
                 message=f"Welcome {input.username}!",
@@ -114,7 +114,7 @@ def main():
     async def process_refund(ctx: WorkflowContext, input: RefundInput) -> dict:
         await asyncio.sleep(0.3)
         order_status = await ctx.execute_action(
-            action=check_order_status,
+            action=check_order_status_action,
             input_data=input.order_id,
             max_retries=2,
             retry_mechanism=RetryMechanism.CONSTANT,
@@ -133,7 +133,7 @@ def main():
         await asyncio.sleep(0.2)
 
         notification_result = await ctx.execute_action(
-            action=send_notification,
+            action=send_notification_action,
             input_data=NotificationInput(
                 recipient="finance@company.com",
                 message=(
@@ -161,7 +161,7 @@ def main():
         await asyncio.sleep(0.3)
 
         payment_result = await ctx.execute_action(
-            action=validate_payment,
+            action=validate_payment_action,
             input_data=input,
             max_retries=3,
             retry_mechanism=RetryMechanism.EXPONENTIAL,
@@ -171,7 +171,7 @@ def main():
         await asyncio.sleep(0.2)
 
         notification_result = await ctx.execute_action(
-            action=send_notification,
+            action=send_notification_action,
             input_data=NotificationInput(
                 recipient="admin@company.com",
                 message=f"Payment of ${payment_result.amount} validated with ID {payment_result.payment_id}",

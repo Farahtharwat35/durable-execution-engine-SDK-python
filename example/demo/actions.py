@@ -5,7 +5,7 @@ import time
 from .models import *
 
 
-def validate_payment(input_data: PaymentInput) -> PaymentResult:
+def validate_payment_action(input_data: PaymentInput) -> PaymentResult:
     time.sleep(8)
 
     if random.random() < 0.5:
@@ -18,7 +18,7 @@ def validate_payment(input_data: PaymentInput) -> PaymentResult:
     )
 
 
-def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
+def reserve_inventory_action(input_data: InventoryInput) -> InventoryResult:
     time.sleep(10)
 
     if random.random() < 0.50:
@@ -32,7 +32,7 @@ def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
     )
 
 
-async def send_notification(
+async def send_notification_action(
     input_data: NotificationInput,
 ) -> NotificationResult:
     await asyncio.sleep(6)
@@ -44,7 +44,7 @@ async def send_notification(
     )
 
 
-def create_user(input_data: UserInput) -> UserResult:
+def create_user_action(input_data: UserInput) -> UserResult:
     time.sleep(7)
 
     return UserResult(
@@ -54,7 +54,7 @@ def create_user(input_data: UserInput) -> UserResult:
     )
 
 
-def process_refund(input_data: RefundInput) -> RefundResult:
+def process_refund_action(input_data: RefundInput) -> RefundResult:
     time.sleep(9)
 
     if random.random() < 0.9:
@@ -67,7 +67,7 @@ def process_refund(input_data: RefundInput) -> RefundResult:
     )
 
 
-def check_order_status(order_id: str) -> dict:
+def check_order_status_action(order_id: str) -> dict:
     time.sleep(5)
 
     return {
