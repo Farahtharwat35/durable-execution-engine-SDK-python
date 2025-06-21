@@ -115,6 +115,17 @@ def main():
 
     @payment_service.workflow()
     async def process_refund(ctx: WorkflowContext, input: RefundInput) -> dict:
+        await asyncio.sleep(0.3)
+        order_status = await ctx.execute_action(
+            action=check_order_status,
+            input_data=input.order_id,
+            max_retries=2,
+            retry_mechanism=RetryMechanism.CONSTANT,
+            action_name="pre_refund_order_check"
+        )
+        
+        await asyncio.sleep(0.2)        
+        
         refund_result = await ctx.execute_action(
             action=process_refund,
             input_data=input,
@@ -122,10 +133,59 @@ def main():
             retry_mechanism=RetryMechanism.EXPONENTIAL
         )
         
+        await asyncio.sleep(0.2)
+        
+        notification_result = await ctx.execute_action(
+            action=send_notification,
+            input_data=NotificationInput(
+                recipient="finance@company.com",
+                message=f"Refund processed: ${refund_result.amount} for order {input.order_id}. Refund ID: {refund_result.refund_id}",
+                type="email"
+            ),
+            max_retries=2,
+            retry_mechanism=RetryMechanism.LINEAR
+        )
+        
         return {
             "order_id": input.order_id,
+            "order_status": order_status,
             "refund": refund_result,
+            "notification": notification_result,
             "status": "completed"
+        }
+
+    @payment_service.workflow()
+    async def verify_payment_and_notify(ctx: WorkflowContext, input: PaymentInput) -> dict:
+        await asyncio.sleep(0.3)
+        
+        payment_result = await ctx.execute_action(
+            action=validate_payment,
+            input_data=input,
+            max_retries=3,
+            retry_mechanism=RetryMechanism.EXPONENTIAL,
+            action_name="primary_payment_validation"
+        )
+        
+        await asyncio.sleep(0.2)
+        
+    
+        notification_result = await ctx.execute_action(
+            action=send_notification,
+            input_data=NotificationInput(
+                recipient="admin@company.com",
+                message=f"Payment of ${payment_result.amount} validated with ID {payment_result.payment_id}",
+                type="email"
+            ),
+            max_retries=2,
+            retry_mechanism=RetryMechanism.LINEAR
+        )
+        
+        return {
+            "payment_id": payment_result.payment_id,
+            "amount": payment_result.amount,
+            "payment_status": payment_result.status,
+            "notification": notification_result,
+            "workflow_status": "completed"
         }
 
     durable_app = DurableApp(app)

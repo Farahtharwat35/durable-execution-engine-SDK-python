@@ -20,7 +20,7 @@ def validate_payment(input_data: PaymentInput) -> PaymentResult:
 def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
     time.sleep(10)
     
-    if random.random() < 0.60:
+    if random.random() < 0.50:
         raise Exception(f"Insufficient inventory for {input_data.item_id}")
     
     return InventoryResult(
@@ -34,9 +34,6 @@ def reserve_inventory(input_data: InventoryInput) -> InventoryResult:
 async def send_notification(input_data: NotificationInput) -> NotificationResult:
     await asyncio.sleep(6)
     
-    if random.random() < 0.75:
-        raise Exception(f"Failed to send {input_data.type}")
-    
     return NotificationResult(
         notification_id=f"notif_{random.randint(1000, 9999)}",
         recipient=input_data.recipient,
@@ -46,9 +43,6 @@ async def send_notification(input_data: NotificationInput) -> NotificationResult
 
 def create_user(input_data: UserInput) -> UserResult:
     time.sleep(7)
-    
-    if random.random() < 0.7:
-        raise Exception("User creation failed")
     
     return UserResult(
         user_id=f"user_{random.randint(1000, 9999)}",
@@ -60,7 +54,7 @@ def create_user(input_data: UserInput) -> UserResult:
 def process_refund(input_data: RefundInput) -> RefundResult:
     time.sleep(9)
     
-    if random.random() < 0.85:
+    if random.random() < 0.9:
         raise Exception("Refund processing failed")
     
     return RefundResult(
