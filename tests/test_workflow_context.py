@@ -224,7 +224,7 @@ async def test_retry_respects_timing(workflow_context):
             assert mock_sleep.call_count == 3
             sleep_duration = mock_sleep.call_args[0][0]
             assert sleep_duration > 0 and sleep_duration <= 5
-            assert mock_send_log.call_count == 4
+            assert mock_send_log.call_count == 5
 
 
 @pytest.mark.asyncio
