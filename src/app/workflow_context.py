@@ -145,8 +145,7 @@ class WorkflowContext:
         status_code = engine_response["status_code"]
         match status_code:
             case status.HTTP_201_CREATED | status.HTTP_200_OK:
-                attempt = 0
-                while attempt <= max_retries:
+                while True:
                     try:
                         try:
                             if asyncio.iscoroutinefunction(action):
@@ -186,15 +185,6 @@ class WorkflowContext:
                         )
                         raise
                     except Exception as e:
-                        if attempt == max_retries:
-                            raise EndureException(
-                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                output={
-                                    "error": str(
-                                        "Action failed after reaching max retries"
-                                    )
-                                },
-                            )
                         log = Log(
                             status=LogStatus.FAILED,
                             output=serialize_data({"error": str(e)}),
@@ -202,7 +192,21 @@ class WorkflowContext:
                         engine_response = InternalEndureClient.send_log(
                             self.execution_id, log, name
                         )
-                        attempt += 1
+
+                        engine_status = engine_response.get("status_code")
+                        if engine_status in [
+                            status.HTTP_400_BAD_REQUEST,
+                            status.HTTP_404_NOT_FOUND,
+                        ]:
+                            raise EndureException(
+                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                output=serialize_data({
+                                    "error": str(
+                                        "Action failed after reaching max retries"
+                                    )
+                                }),
+                            )
+
                         retry_at_unix = engine_response.get("payload", {}).get(
                             "retry_at"
                         )
