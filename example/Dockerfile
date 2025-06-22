@@ -28,6 +28,8 @@ COPY --from=builder /opt/venv /opt/venv
 COPY . .
 
 # Set the environment variables
+ENV PYTHONPATH=/app
+ENV LOG_LEVEL=DEBUG
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Expose the port the app runs on
