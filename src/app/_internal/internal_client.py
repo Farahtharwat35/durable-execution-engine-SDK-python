@@ -29,11 +29,17 @@ class InternalEndureClient:
         """  # noqa: E501
         try:
             if not self._base_url:
+                logging.error(
+                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+                )
                 raise ValueError(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
                 )
 
             if not log or not action_name:
+                logging.error(
+                    "log and action_name must be provided."
+                )
                 raise ValueError("log and action_name must be provided.")
 
             url = (
@@ -42,10 +48,20 @@ class InternalEndureClient:
             headers = {"Content-Type": "application/json"}
             payload = log.to_dict()
             response = requests.patch(url, headers=headers, json=payload)
+            logging.info(
+                "Log sent to the Durable Execution Engine: {}".format(log)
+            )
+            logging.info("Response after sending log: {}".format(response))
             response.raise_for_status()
             try:
                 response_payload = response.json()
+                logging.info(
+                    "Response payload: {}".format(response_payload)
+                )
             except ValueError:
+                logging.error(
+                    "Error parsing response payload: {}".format(e)
+                )
                 response_payload = {}
             response = Response(
                 status_code=response.status_code,
@@ -54,8 +70,14 @@ class InternalEndureClient:
         except requests.exceptions.HTTPError as e:
             try:
                 error_payload = e.response.json()
+                logging.info(
+                    "Error payload: {}".format(error_payload)
+                )
             except Exception:
                 error_payload = {}
+                logging.error(
+                    "Error payload: {}".format(error_payload)
+                )
             response = Response(
                 status_code=e.response.status_code,
                 payload=error_payload,
@@ -84,17 +106,29 @@ class InternalEndureClient:
         """
         try:
             if not self._base_url:
+                logging.error(
+                    "DURABLE_ENGINE_BASE_URL is not set in environment variables."
+                )
                 raise ValueError(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
                 )
             url = f"{self._base_url}/executions/{execution_id}/started"
             headers = {"Content-Type": "application/json"}
             response = requests.patch(url, headers=headers)
+            logging.info(
+                "Execution marked as running: {}".format(response)
+            )
+            logging.info(
+                "Response after marking execution as running: {}".format(response)
+            )
             response.raise_for_status()
             response = Response(
                 status_code=response.status_code,
             )
         except requests.exceptions.HTTPError as e:
+            logging.error(
+                "Error marking execution as running: {}".format(e)
+            )
             response = Response(
                 status_code=e.response.status_code,
             )
