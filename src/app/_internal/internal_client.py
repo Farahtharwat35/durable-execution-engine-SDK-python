@@ -28,6 +28,9 @@ class InternalEndureClient:
             requests.exceptions.HTTPError: If the request fails.
         """  # noqa: E501
         try:
+            logging.info(f"Attempting to send log to engine - Execution ID: {execution_id}, Action: {action_name}")
+            logging.info(f"Base URL: {self._base_url}")
+            
             if not self._base_url:
                 logging.error(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
@@ -47,11 +50,19 @@ class InternalEndureClient:
             )
             headers = {"Content-Type": "application/json"}
             payload = log.to_dict()
+            
+            logging.info(f"Making request to: {url}")
+            logging.info(f"Request headers: {headers}")
+            logging.info(f"Request payload: {payload}")
+            
             response = requests.patch(url, headers=headers, json=payload)
             logging.info(
                 "Log sent to the Durable Execution Engine: {}".format(log)
             )
+            logging.info(f"Response status code: {response.status_code}")
+            logging.info(f"Response headers: {dict(response.headers)}")
             logging.info("Response after sending log: {}".format(response))
+            
             response.raise_for_status()
             try:
                 response_payload = response.json()
@@ -62,21 +73,26 @@ class InternalEndureClient:
                 logging.error(
                     "Error parsing response payload: {}".format(e)
                 )
+                logging.error(f"Raw response text: {response.text}")
                 response_payload = {}
             response = Response(
                 status_code=response.status_code,
                 payload=response_payload,
             )
         except requests.exceptions.HTTPError as e:
+            logging.error(f"HTTP ERROR: Status {e.response.status_code}")
+            logging.error(f"HTTP ERROR: URL {e.response.url}")
+            logging.error(f"HTTP ERROR: Headers {dict(e.response.headers)}")
+            logging.error(f"HTTP ERROR: Text {e.response.text}")
             try:
                 error_payload = e.response.json()
                 logging.info(
                     "Error payload: {}".format(error_payload)
                 )
-            except Exception:
+            except Exception as parse_error:
                 error_payload = {}
                 logging.error(
-                    "Error payload: {}".format(error_payload)
+                    f"Error parsing error payload: {parse_error}. Raw text: {e.response.text}"
                 )
             response = Response(
                 status_code=e.response.status_code,
@@ -84,9 +100,15 @@ class InternalEndureClient:
             )
         except requests.exceptions.RequestException as e:
             logging.error(
-                "Engine is unreachable. Aborting retries: {}".format(e)
+                f"NETWORK ERROR: Engine is unreachable. Error type: {type(e).__name__}"
             )
+            logging.error(f"NETWORK ERROR: Error details: {e}")
             raise e
+        except Exception as e:
+            logging.error(f"UNEXPECTED ERROR in send_log: {type(e).__name__}: {e}")
+            raise e
+            
+        logging.info(f"Returning response: {response.to_dict()}")
         return response.to_dict()
 
     @classmethod
@@ -105,6 +127,9 @@ class InternalEndureClient:
             requests.exceptions.HTTPError: If the request fails.
         """
         try:
+            logging.info(f"Attempting to mark execution as running - Execution ID: {execution_id}")
+            logging.info(f"Base URL: {self._base_url}")
+            
             if not self._base_url:
                 logging.error(
                     "DURABLE_ENGINE_BASE_URL is not set in environment variables."
@@ -114,10 +139,16 @@ class InternalEndureClient:
                 )
             url = f"{self._base_url}/executions/{execution_id}/started"
             headers = {"Content-Type": "application/json"}
+            
+            logging.info(f"Making request to: {url}")
+            logging.info(f"Request headers: {headers}")
+            
             response = requests.patch(url, headers=headers)
             logging.info(
                 "Execution marked as running: {}".format(response)
             )
+            logging.info(f"Response status code: {response.status_code}")
+            logging.info(f"Response headers: {dict(response.headers)}")
             logging.info(
                 "Response after marking execution as running: {}".format(response)
             )
@@ -126,15 +157,21 @@ class InternalEndureClient:
                 status_code=response.status_code,
             )
         except requests.exceptions.HTTPError as e:
-            logging.error(
-                "Error marking execution as running: {}".format(e)
-            )
+            logging.error(f"HTTP ERROR marking execution as running: Status {e.response.status_code}")
+            logging.error(f"HTTP ERROR: URL {e.response.url}")
+            logging.error(f"HTTP ERROR: Text {e.response.text}")
             response = Response(
                 status_code=e.response.status_code,
             )
         except requests.exceptions.RequestException as e:
             logging.error(
-                "Engine is unreachable. Aborting retries: {}".format(e)
+                f"NETWORK ERROR: Engine is unreachable. Error type: {type(e).__name__}"
             )
+            logging.error(f"NETWORK ERROR: Error details: {e}")
             raise e
+        except Exception as e:
+            logging.error(f"UNEXPECTED ERROR in mark_execution_as_running: {type(e).__name__}: {e}")
+            raise e
+            
+        logging.info(f"Returning response: {response.to_dict()}")
         return response.to_dict()

@@ -135,6 +135,9 @@ class WorkflowContext:
             max_retries=max_retries,
         )
         name = action_name if action_name is not None else action.__name__
+        logging.info(
+            "Sending log for action: {}".format(log)
+        )
         engine_response = InternalEndureClient.send_log(
             self.execution_id, log, name
         )
@@ -142,12 +145,26 @@ class WorkflowContext:
             "Engine response: {}".format(engine_response)
         )
         if not engine_response:
+            logging.error(
+                "CRITICAL ERROR: Engine response is None or empty. This indicates a communication failure with the durable engine."
+            )
             raise ValueError(
                 "Base URL is not set in environment variables or missing required parameters (log or action_name)."
             )
+        
+        # Log detailed response information
+        logging.info(
+            f"Detailed engine response - Status: {engine_response.get('status_code')}, "
+            f"Payload: {engine_response.get('payload')}, "
+            f"Headers: {engine_response.get('headers', {})}"
+        )
+        
         status_code = engine_response["status_code"]
+        logging.info(f"Processing status code: {status_code}")
+        
         match status_code:
             case status.HTTP_201_CREATED | status.HTTP_200_OK:
+                logging.info(f"Status {status_code} - Proceeding with action execution")
                 while True:
                     try:
                         try:
@@ -162,6 +179,9 @@ class WorkflowContext:
                                 "Action result: {}".format(result)
                             )
                         except (ValueError, ValidationError) as e:
+                            logging.error(
+                                f"VALIDATION ERROR in action {action.__name__}: {type(e).__name__}: {e}"
+                            )
                             engine_response = InternalEndureClient.send_log(
                                 self.execution_id,
                                 Log(
@@ -171,7 +191,7 @@ class WorkflowContext:
                                 name,
                             )
                             logging.info(
-                                "Engine response: {}".format(engine_response)
+                                "Engine response after validation error: {}".format(engine_response)
                             )
                             logging.error(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
@@ -190,7 +210,7 @@ class WorkflowContext:
                             name,
                         )
                         logging.info(
-                            "Engine response: {}".format(engine_response)
+                            "Engine response after completion: {}".format(engine_response)
                         )
                         logging.info(
                             "Returning result: {}".format(result)
@@ -201,11 +221,20 @@ class WorkflowContext:
                         ValidationError,
                         requests.exceptions.RequestException,
                     ) as e:
-                        logging.debug(
-                            f"DEBUG: Caught exception of type {type(e)}: {e}"
+                        logging.error(
+                            f"CRITICAL ERROR: Caught exception of type {type(e)}: {e}"
+                        )
+                        logging.error(
+                            f"Exception details - Args: {e.args}, Traceback: {type(e).__name__}"
                         )
                         raise
                     except Exception as e:
+                        logging.error(
+                            f"UNEXPECTED ERROR in action {action.__name__}: {type(e).__name__}: {e}"
+                        )
+                        logging.error(
+                            f"Error details - Args: {e.args}, Traceback: {type(e).__name__}"
+                        )
                         log = Log(
                             status=LogStatus.FAILED,
                             output=serialize_data({"error": str(e)}),
@@ -217,15 +246,18 @@ class WorkflowContext:
                             self.execution_id, log, name
                         )
                         logging.info(
-                            "Engine response: {}".format(engine_response)
+                            "Engine response after failure: {}".format(engine_response)
                         )
                         engine_status = engine_response.get("status_code")
+                        logging.info(f"Engine status after failure: {engine_status}")
+                        
                         if engine_status in [
                             status.HTTP_400_BAD_REQUEST,
                             status.HTTP_404_NOT_FOUND,
                         ]:
                             logging.error(
-                                "Raising EndureException: {}".format(e)
+                                f"ENGINE ERROR: Received {engine_status} from engine. "
+                                f"Original error: {type(e).__name__}: {e}"
                             )
                             raise EndureException(
                                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -248,9 +280,30 @@ class WorkflowContext:
                                     "Sleeping for {} seconds".format(sleep_seconds)
                                 )
                                 time.sleep(sleep_seconds)
+                            else:
+                                logging.warning(
+                                    f"Retry time {retry_at_unix} is in the past. "
+                                    f"Current time: {time.time()}"
+                                )
+                        else:
+                            logging.error(
+                                "CRITICAL ERROR: No retry_at time provided by engine. "
+                                f"Engine response: {engine_response}"
+                            )
+                            raise RuntimeError(
+                                f"Engine did not provide retry_at time. Response: {engine_response}"
+                            )
             case status.HTTP_208_ALREADY_REPORTED:
                 logging.info(
                     "Returning cached result: {}".format(engine_response)
                 )
                 output = engine_response.get("payload", {}).get("output")
                 return output if output else {}
+            case _:
+                logging.error(
+                    f"UNEXPECTED STATUS CODE: {status_code}. "
+                    f"Full response: {engine_response}"
+                )
+                raise RuntimeError(
+                    f"Unexpected status code {status_code} from engine: {engine_response}"
+                )
