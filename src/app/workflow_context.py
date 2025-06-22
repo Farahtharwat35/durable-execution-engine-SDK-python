@@ -162,13 +162,16 @@ class WorkflowContext:
                                 "Action result: {}".format(result)
                             )
                         except (ValueError, ValidationError) as e:
-                            InternalEndureClient.send_log(
+                            engine_response = InternalEndureClient.send_log(
                                 self.execution_id,
                                 Log(
                                     status=LogStatus.FAILED,
                                     output=serialize_data({"error": str(e)}),
                                 ),
                                 name,
+                            )
+                            logging.info(
+                                "Engine response: {}".format(engine_response)
                             )
                             logging.error(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
@@ -181,10 +184,13 @@ class WorkflowContext:
                         logging.info(
                             "Sending log for completed action: {}".format(log)
                         )
-                        InternalEndureClient.send_log(
+                        engine_response = InternalEndureClient.send_log(
                             self.execution_id,
                             log,
                             name,
+                        )
+                        logging.info(
+                            "Engine response: {}".format(engine_response)
                         )
                         logging.info(
                             "Returning result: {}".format(result)
