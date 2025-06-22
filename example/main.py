@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from app import DurableApp, Service, WorkflowContext
 from app.types import RetryMechanism
 
-#logging to show all levels
+# logging to show all levels
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
