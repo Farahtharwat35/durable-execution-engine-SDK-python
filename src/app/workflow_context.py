@@ -138,6 +138,9 @@ class WorkflowContext:
         engine_response = InternalEndureClient.send_log(
             self.execution_id, log, name
         )
+        logging.info(
+            "Engine response: {}".format(engine_response)
+        )
         if not engine_response:
             raise ValueError(
                 "Base URL is not set in environment variables or missing required parameters (log or action_name)."
@@ -148,12 +151,18 @@ class WorkflowContext:
                 while True:
                     try:
                         try:
+                            logging.info(
+                                "Executing action: {}".format(action.__name__)
+                            )
                             if asyncio.iscoroutinefunction(action):
                                 result = await action(input_data)
                             else:
                                 result = action(input_data)
+                            logging.info(
+                                "Action result: {}".format(result)
+                            )
                         except (ValueError, ValidationError) as e:
-                            InternalEndureClient.send_log(
+                            engine_response = InternalEndureClient.send_log(
                                 self.execution_id,
                                 Log(
                                     status=LogStatus.FAILED,
@@ -162,6 +171,9 @@ class WorkflowContext:
                                 name,
                             )
                             logging.info(
+                                "Engine response: {}".format(engine_response)
+                            )
+                            logging.error(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
                             )
                             raise
@@ -169,10 +181,19 @@ class WorkflowContext:
                             status=LogStatus.COMPLETED,
                             output=serialize_data(result),
                         )
-                        InternalEndureClient.send_log(
+                        logging.info(
+                            "Sending log for completed action: {}".format(log)
+                        )
+                        engine_response = InternalEndureClient.send_log(
                             self.execution_id,
                             log,
                             name,
+                        )
+                        logging.info(
+                            "Engine response: {}".format(engine_response)
+                        )
+                        logging.info(
+                            "Returning result: {}".format(result)
                         )
                         return result
                     except (
@@ -189,15 +210,23 @@ class WorkflowContext:
                             status=LogStatus.FAILED,
                             output=serialize_data({"error": str(e)}),
                         )
+                        logging.info(
+                            "Sending log for failed action: {}".format(log)
+                        )
                         engine_response = InternalEndureClient.send_log(
                             self.execution_id, log, name
                         )
-
+                        logging.info(
+                            "Engine response: {}".format(engine_response)
+                        )
                         engine_status = engine_response.get("status_code")
                         if engine_status in [
                             status.HTTP_400_BAD_REQUEST,
                             status.HTTP_404_NOT_FOUND,
                         ]:
+                            logging.error(
+                                "Raising EndureException: {}".format(e)
+                            )
                             raise EndureException(
                                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 output=serialize_data({
@@ -206,14 +235,22 @@ class WorkflowContext:
                                     )
                                 }),
                             )
-
                         retry_at_unix = engine_response.get("payload", {}).get(
                             "retry_at"
+                        )
+                        logging.info(
+                            "Retry at unix: {}".format(retry_at_unix)
                         )
                         if retry_at_unix:
                             sleep_seconds = retry_at_unix - time.time()
                             if sleep_seconds > 0:
+                                logging.info(
+                                    "Sleeping for {} seconds".format(sleep_seconds)
+                                )
                                 time.sleep(sleep_seconds)
             case status.HTTP_208_ALREADY_REPORTED:
+                logging.info(
+                    "Returning cached result: {}".format(engine_response)
+                )
                 output = engine_response.get("payload", {}).get("output")
                 return output if output else {}

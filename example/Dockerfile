@@ -23,6 +23,8 @@ ENV DURABLE_ENGINE_BASE_URL=http://host.docker.internal:8080/api/v1
 ENV PYTHONPATH=/app/src:/app
 ENV PYTHONUNBUFFERED=1
 
+ENV LOG_LEVEL=DEBUG
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
