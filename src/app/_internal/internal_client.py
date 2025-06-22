@@ -58,7 +58,7 @@ class InternalEndureClient:
                 logging.info(
                     "Response payload: {}".format(response_payload)
                 )
-            except ValueError:
+            except ValueError as e:
                 logging.error(
                     "Error parsing response payload: {}".format(e)
                 )
