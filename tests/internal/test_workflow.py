@@ -1,12 +1,14 @@
-import pytest
-from unittest.mock import AsyncMock, patch
 from typing import Any
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from fastapi import HTTPException
+from pydantic import BaseModel
+from starlette.responses import Response
+
 from app._internal.workflow import Workflow
 from app.types import EndureException
 from app.workflow_context import WorkflowContext
-from starlette.responses import Response
-from fastapi import HTTPException
-from pydantic import BaseModel
 
 
 class InputModel:

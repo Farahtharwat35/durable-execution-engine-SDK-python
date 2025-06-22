@@ -1,37 +1,35 @@
-# Stage 1: Build stage
 FROM python:3.10-slim AS builder
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
-
-# Create a virtual environment and install dependencies
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . .
+COPY ../src ./src
+COPY ./ ./example
 
-# Stage 2: Final stage
 FROM python:3.10-slim
 
-# Set the working directory to /app/Example
-WORKDIR /app/Example
+WORKDIR /app
 
-# Copy only the virtual environment from the builder stage
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy the application code into the Example directory
-COPY . .
 
-# Set the environment variables
-ENV PATH="/opt/venv/bin:$PATH"
+COPY src/ ./src/
+COPY example/ ./example/
 
-# Expose the port the app runs on
+ENV DURABLE_ENGINE_BASE_URL=http://host.docker.internal:8080/api/v1
+ENV PYTHONPATH=/app/src:/app
+ENV PYTHONUNBUFFERED=1
+
+ENV LOG_LEVEL=DEBUG
+
 EXPOSE 8000
 
-# Command to run the application using Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/discover || exit 1
+
+WORKDIR /app/example
+
+CMD ["python", "main.py"]

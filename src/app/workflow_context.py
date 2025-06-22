@@ -1,18 +1,14 @@
-import time
-import logging
 import asyncio
-from fastapi import status
+import logging
+import time
+
 import requests
-from app._internal.internal_client import (
-    InternalEndureClient,
-)
-from app.types import (
-    Log,
-    LogStatus,
-    RetryMechanism,
-    EndureException,
-)
+from fastapi import status
 from pydantic import ValidationError
+
+from app._internal.internal_client import InternalEndureClient
+from app._internal.utils import serialize_data
+from app.types import EndureException, Log, LogStatus, RetryMechanism
 
 
 class WorkflowContext:
@@ -65,6 +61,7 @@ class WorkflowContext:
         input_data,
         max_retries: int,
         retry_mechanism: RetryMechanism,
+        action_name: str = None,
     ) -> any:
         """
         Execute an action with durability guarantees and automatic retry capabilities.
@@ -93,6 +90,8 @@ class WorkflowContext:
                                             - LINEAR_BACKOFF
                                             - EXPONENTIAL_BACKOFF
                                             etc.
+            action_name (str, optional): Custom name for the action in logs. If not provided,
+                                       uses action.__name__.
 
         Returns:
             any: Either:
@@ -131,85 +130,201 @@ class WorkflowContext:
         """
         log = Log(
             status=LogStatus.STARTED,
-            input=input_data,
+            input=serialize_data(input_data),
             retry_mechanism=retry_mechanism,
             max_retries=max_retries,
         )
+        name = action_name if action_name is not None else action.__name__
+        logging.info("Sending log for action: {}".format(log))
         engine_response = InternalEndureClient.send_log(
-            self.execution_id, log, action.__name__
+            self.execution_id, log, name
         )
+        logging.info("Engine response: {}".format(engine_response))
         if not engine_response:
+            logging.error(
+                "CRITICAL ERROR: Engine response is None or empty. "
+                "This indicates a communication failure with the durable engine."
+            )
             raise ValueError(
                 "Base URL is not set in environment variables or missing required parameters (log or action_name)."
             )
+
+        logging.info(
+            f"Detailed engine response - Status: {engine_response.get('status_code')}, "
+            f"Payload: {engine_response.get('payload')}, "
+            f"Headers: {engine_response.get('headers', {})}"
+        )
+
         status_code = engine_response["status_code"]
+        logging.info(f"Processing status code: {status_code}")
+
         match status_code:
             case status.HTTP_201_CREATED | status.HTTP_200_OK:
-                attempt = 0
-                while attempt <= max_retries:
+                logging.info(
+                    f"Status {status_code} - Proceeding with action execution"
+                )
+                while True:
                     try:
                         try:
+                            logging.info(
+                                "Executing action: {}".format(action.__name__)
+                            )
                             if asyncio.iscoroutinefunction(action):
                                 result = await action(input_data)
                             else:
                                 result = action(input_data)
+                            logging.info("Action result: {}".format(result))
                         except (ValueError, ValidationError) as e:
-                            InternalEndureClient.send_log(
+                            logging.error(
+                                f"VALIDATION ERROR in action {action.__name__}: {type(e).__name__}: {e}"
+                            )
+                            engine_response = InternalEndureClient.send_log(
                                 self.execution_id,
                                 Log(
                                     status=LogStatus.FAILED,
-                                    output={"error": str(e)},
+                                    output=serialize_data({"error": str(e)}),
                                 ),
-                                action.__name__,
+                                name,
                             )
                             logging.info(
+                                "Engine response after validation error: {}".format(
+                                    engine_response
+                                )
+                            )
+                            logging.error(
                                 f"WORKFLOW DEBUG: About to raise exception of type {type(e)}: {e}"
                             )
                             raise
                         log = Log(
                             status=LogStatus.COMPLETED,
-                            output=result,
+                            output=serialize_data(result),
                         )
-                        InternalEndureClient.send_log(
+                        logging.info(
+                            "Sending log for completed action: {}".format(log)
+                        )
+                        engine_response = InternalEndureClient.send_log(
                             self.execution_id,
                             log,
-                            action.__name__,
+                            name,
                         )
+                        logging.info(
+                            "Engine response after completion: {}".format(
+                                engine_response
+                            )
+                        )
+                        logging.info("Returning result: {}".format(result))
                         return result
                     except (
                         ValueError,
                         ValidationError,
                         requests.exceptions.RequestException,
                     ) as e:
-                        logging.debug(
-                            f"DEBUG: Caught exception of type {type(e)}: {e}"
+                        logging.error(
+                            f"CRITICAL ERROR: Caught exception of type {type(e)}: {e}"
+                        )
+                        logging.error(
+                            f"Exception details - Args: {e.args}, Traceback: {type(e).__name__}"
                         )
                         raise
                     except Exception as e:
-                        if attempt == max_retries:
-                            raise EndureException(
-                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                output={
-                                    "error": str(
-                                        "Action failed after reaching max retries"
-                                    )
-                                },
-                            )
+                        logging.error(
+                            f"UNEXPECTED ERROR in action {action.__name__}: {type(e).__name__}: {e}"
+                        )
+                        logging.error(
+                            f"Error details - Args: {e.args}, Traceback: {type(e).__name__}"
+                        )
                         log = Log(
                             status=LogStatus.FAILED,
-                            output={"error": str(e)},
+                            output=serialize_data({"error": str(e)}),
+                        )
+                        logging.info(
+                            "Sending log for failed action: {}".format(log)
                         )
                         engine_response = InternalEndureClient.send_log(
-                            self.execution_id, log, action.__name__
+                            self.execution_id, log, name
                         )
-                        attempt += 1
+                        logging.info(
+                            "Engine response after failure: {}".format(
+                                engine_response
+                            )
+                        )
+                        engine_status = engine_response.get("status_code")
+                        logging.info(
+                            f"Engine status after failure: {engine_status}"
+                        )
+
+                        if engine_status in [
+                            status.HTTP_400_BAD_REQUEST,
+                            status.HTTP_404_NOT_FOUND,
+                            status.HTTP_409_CONFLICT,
+                        ]:
+                            logging.error(
+                                f"ENGINE ERROR: Received {engine_status} from engine. "
+                                f"Original error: {type(e).__name__}: {e}"
+                            )
+                            if engine_status == status.HTTP_409_CONFLICT:
+                                logging.error(
+                                    "Execution Paused or Terminated , no retries will be attempted."
+                                )
+                                raise EndureException(
+                                    status_code=engine_status,
+                                    output=serialize_data(
+                                        {
+                                            "error": str(
+                                                "Execution Paused or Terminated"
+                                            )
+                                        }
+                                    ),
+                                )
+                            raise EndureException(
+                                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                output=serialize_data(
+                                    {
+                                        "error": str(
+                                            "Action failed after reaching max retries"
+                                        )
+                                    }
+                                ),
+                            )
                         retry_at_unix = engine_response.get("payload", {}).get(
                             "retry_at"
                         )
+                        logging.info("Retry at unix: {}".format(retry_at_unix))
                         if retry_at_unix:
                             sleep_seconds = retry_at_unix - time.time()
                             if sleep_seconds > 0:
+                                logging.info(
+                                    "Sleeping for {} seconds".format(
+                                        sleep_seconds
+                                    )
+                                )
                                 time.sleep(sleep_seconds)
+                            else:
+                                logging.warning(
+                                    f"Retry time {retry_at_unix} is in the past. "
+                                    f"Current time: {time.time()}"
+                                )
+                        else:
+                            logging.error(
+                                f"CRITICAL ERROR: No retry_at time provided by "
+                                f"engine for retryable status {engine_status}. "
+                                f"Engine response: {engine_response}"
+                            )
+                            raise RuntimeError(
+                                f"Engine did not provide retry_at time for retryable status {engine_status}. "
+                                f"Response: {engine_response}"
+                            )
             case status.HTTP_208_ALREADY_REPORTED:
+                logging.info(
+                    "Returning cached result: {}".format(engine_response)
+                )
                 output = engine_response.get("payload", {}).get("output")
                 return output if output else {}
+            case _:
+                logging.error(
+                    f"UNEXPECTED STATUS CODE: {status_code}. "
+                    f"Full response: {engine_response}"
+                )
+                raise RuntimeError(
+                    f"Unexpected status code {status_code} from engine: {engine_response}"
+                )

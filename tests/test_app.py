@@ -1,9 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch
 
-from app import DurableApp, Service, WorkflowContext, EndureException
+from app import DurableApp, EndureException, Service, WorkflowContext
 from app._internal import ServiceRegistry
 
 
@@ -48,11 +49,11 @@ class TestApp:
         assert response.status_code == 200
 
         data = response.json()
-        assert "services" in data
-        assert len(data["services"]) == 1
+        assert isinstance(data, list)
+        assert len(data) == 1
 
-        service = data["services"][0]
-        assert service["name"] == "test_service"
+        service = data[0]
+        assert service["service_name"] == "test_service"
         assert len(service["workflows"]) == 1
 
         workflow = service["workflows"][0]
@@ -123,17 +124,17 @@ class TestApp:
         assert response.status_code == 200
 
         data = response.json()
-        assert len(data["services"]) == 2
+        assert len(data) == 2
 
         service1_data = next(
-            s for s in data["services"] if s["name"] == "service1"
+            s for s in data if s["service_name"] == "service1"
         )
         assert len(service1_data["workflows"]) == 2
         workflow_names = {w["name"] for w in service1_data["workflows"]}
         assert workflow_names == {"workflow1", "workflow2"}
 
         service2_data = next(
-            s for s in data["services"] if s["name"] == "service2"
+            s for s in data if s["service_name"] == "service2"
         )
         assert len(service2_data["workflows"]) == 1
         assert service2_data["workflows"][0]["name"] == "workflow3"

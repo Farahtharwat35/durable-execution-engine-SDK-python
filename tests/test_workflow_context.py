@@ -1,11 +1,13 @@
-from app.types import LogStatus, RetryMechanism, Response
-import pytest
-from unittest.mock import patch
-from fastapi import status, HTTPException
-import time
-from pydantic import ValidationError, BaseModel
-import requests
 import asyncio
+import time
+from unittest.mock import patch
+
+import pytest
+import requests
+from fastapi import HTTPException, status
+from pydantic import BaseModel, ValidationError
+
+from app.types import LogStatus, Response, RetryMechanism
 
 
 @pytest.mark.asyncio
@@ -222,7 +224,7 @@ async def test_retry_respects_timing(workflow_context):
             assert mock_sleep.call_count == 3
             sleep_duration = mock_sleep.call_args[0][0]
             assert sleep_duration > 0 and sleep_duration <= 5
-            assert mock_send_log.call_count == 4
+            assert mock_send_log.call_count == 5
 
 
 @pytest.mark.asyncio

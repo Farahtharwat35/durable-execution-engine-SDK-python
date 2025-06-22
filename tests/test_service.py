@@ -1,5 +1,6 @@
 import pytest
-from app import WorkflowContext, Service
+
+from app import Service, WorkflowContext
 from app._internal import ServiceRegistry, Workflow
 
 
