@@ -12,8 +12,9 @@ from app.types import RetryMechanism
 # logging to show all levels
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
 
 def main():
     app = FastAPI(title="Durable Execution Demo", version="1.0.0")

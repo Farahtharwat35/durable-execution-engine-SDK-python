@@ -3,8 +3,15 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from app import (DurableApp, Log, LogStatus, Response, RetryMechanism, Service,
-                 WorkflowContext)
+from app import (
+    DurableApp,
+    Log,
+    LogStatus,
+    Response,
+    RetryMechanism,
+    Service,
+    WorkflowContext,
+)
 from app._internal import InternalEndureClient, ServiceRegistry
 
 
