@@ -152,7 +152,6 @@ class WorkflowContext:
                 "Base URL is not set in environment variables or missing required parameters (log or action_name)."
             )
         
-        # Log detailed response information
         logging.info(
             f"Detailed engine response - Status: {engine_response.get('status_code')}, "
             f"Payload: {engine_response.get('payload')}, "
@@ -254,11 +253,24 @@ class WorkflowContext:
                         if engine_status in [
                             status.HTTP_400_BAD_REQUEST,
                             status.HTTP_404_NOT_FOUND,
+                            status.HTTP_409_CONFLICT,
                         ]:
                             logging.error(
                                 f"ENGINE ERROR: Received {engine_status} from engine. "
                                 f"Original error: {type(e).__name__}: {e}"
                             )
+                            if engine_status == status.HTTP_409_CONFLICT:
+                                logging.error(
+                                    "Execution Paused or Terminated , no retries will be attempted."
+                                )
+                                raise EndureException(
+                                    status_code=engine_status,
+                                    output=serialize_data({
+                                        "error": str(
+                                            "Execution Paused or Terminated"
+                                        )
+                                    }),
+                                )
                             raise EndureException(
                                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 output=serialize_data({
@@ -287,11 +299,11 @@ class WorkflowContext:
                                 )
                         else:
                             logging.error(
-                                "CRITICAL ERROR: No retry_at time provided by engine. "
+                                "CRITICAL ERROR: No retry_at time provided by engine for retryable status {engine_status}. "
                                 f"Engine response: {engine_response}"
                             )
                             raise RuntimeError(
-                                f"Engine did not provide retry_at time. Response: {engine_response}"
+                                f"Engine did not provide retry_at time for retryable status {engine_status}. Response: {engine_response}"
                             )
             case status.HTTP_208_ALREADY_REPORTED:
                 logging.info(
