@@ -60,7 +60,11 @@ class InternalEndureClient:
                 "Log sent to the Durable Execution Engine: {}".format(log)
             )
             logging.info(f"Response status code: {response.status_code}")
-            logging.info(f"Response headers: {dict(response.headers)}")
+            # Safety check for headers attribute (for MockResponse in tests)
+            if hasattr(response, 'headers'):
+                logging.info(f"Response headers: {dict(response.headers)}")
+            else:
+                logging.info("Response headers: Not available (MockResponse)")
             logging.info("Response after sending log: {}".format(response))
 
             response.raise_for_status()
@@ -69,7 +73,10 @@ class InternalEndureClient:
                 logging.info("Response payload: {}".format(response_payload))
             except ValueError as e:
                 logging.error("Error parsing response payload: {}".format(e))
-                logging.error(f"Raw response text: {response.text}")
+                if hasattr(response, 'text'):
+                    logging.error(f"Raw response text: {response.text}")
+                else:
+                    logging.error("Raw response text: Not available (MockResponse)")
                 response_payload = {}
             response = Response(
                 status_code=response.status_code,
@@ -78,16 +85,32 @@ class InternalEndureClient:
         except requests.exceptions.HTTPError as e:
             logging.error(f"HTTP ERROR: Status {e.response.status_code}")
             logging.error(f"HTTP ERROR: URL {e.response.url}")
-            logging.error(f"HTTP ERROR: Headers {dict(e.response.headers)}")
-            logging.error(f"HTTP ERROR: Text {e.response.text}")
+            # Safety check for headers attribute (for MockResponse in tests)
+            if hasattr(e.response, 'headers'):
+                logging.error(f"HTTP ERROR: Headers {dict(e.response.headers)}")
+            else:
+                logging.error("HTTP ERROR: Headers Not available (MockResponse)")
+            # Safety check for text attribute (for MockResponse in tests)
+            if hasattr(e.response, 'text'):
+                logging.error(f"HTTP ERROR: Text {e.response.text}")
+            else:
+                logging.error("HTTP ERROR: Text Not available (MockResponse)")
             try:
                 error_payload = e.response.json()
-                logging.info("Error payload: {}".format(error_payload))
+                logging.info(
+                    "Error payload: {}".format(error_payload)
+                )
             except Exception as parse_error:
                 error_payload = {}
-                logging.error(
-                    f"Error parsing error payload: {parse_error}. Raw text: {e.response.text}"
-                )
+                # Safety check for text attribute (for MockResponse in tests)
+                if hasattr(e.response, 'text'):
+                    logging.error(
+                        f"Error parsing error payload: {parse_error}. Raw text: {e.response.text}"
+                    )
+                else:
+                    logging.error(
+                        f"Error parsing error payload: {parse_error}. Raw text: Not available (MockResponse)"
+                    )
             response = Response(
                 status_code=e.response.status_code,
                 payload=error_payload,
@@ -142,13 +165,16 @@ class InternalEndureClient:
             logging.info(f"Request headers: {headers}")
 
             response = requests.patch(url, headers=headers)
-            logging.info("Execution marked as running: {}".format(response))
-            logging.info(f"Response status code: {response.status_code}")
-            logging.info(f"Response headers: {dict(response.headers)}")
             logging.info(
-                "Response after marking execution as running: {}".format(
-                    response
-                )
+                "Execution marked as running: {}".format(response)
+            )
+            logging.info(f"Response status code: {response.status_code}")
+            if hasattr(response, 'headers'):
+                logging.info(f"Response headers: {dict(response.headers)}")
+            else:
+                logging.info("Response headers: Not available (MockResponse)")
+            logging.info(
+                "Response after marking execution as running: {}".format(response)
             )
             response.raise_for_status()
             response = Response(
