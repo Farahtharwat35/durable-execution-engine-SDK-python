@@ -118,7 +118,8 @@ def main():
         }
 
     @payment_service.workflow()
-    async def process_refund(ctx: WorkflowContext, input: RefundInput) -> dict:
+    async def process_refund(ctx: WorkflowContext, 
+                             input: RefundInput) -> dict:
         await asyncio.sleep(0.3)
         order_status = await ctx.execute_action(
             action=check_order_status_action,
